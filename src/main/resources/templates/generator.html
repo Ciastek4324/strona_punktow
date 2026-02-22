@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Generator list</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+        .form-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <form method="get" action="/generator" class="form-row">
+            <label>
+                Wybierz date
+                <input type="date" name="date" th:value="${date}" required />
+            </label>
+            <button type="submit" class="primary">Generuj</button>
+            <a class="ghost" th:href="@{/generator/print(date=${dateParam})}" target="_blank">Otworz do druku</a>
+            <a class="ghost" th:href="@{/generator/docx(date=${dateParam})}">Plik DOCM</a>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </form>
+
+        <div class="section" style="margin-top:16px;">
+            <div class="day">Podglad</div>
+            <iframe title="Podglad listy"
+                    th:src="@{/generator/print(date=${dateParam})}"
+                    style="width:100%; height:720px; border:1px solid var(--stroke); border-radius:12px; background:#fff;">
+            </iframe>
+        </div>
+    </div>
+</div>
+</body>
+</html>

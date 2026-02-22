@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aktualne punkty</title>
+    <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Aktualne punkty</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Osoba</th>
+                <th>Punkty</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${points}">
+                <td th:text="${row.person.displayName}">Osoba</td>
+                <td th:text="${row.points}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

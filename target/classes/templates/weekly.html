@@ -1,0 +1,98 @@
+﻿<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tygodniowa tabela</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+        .week-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .week-label {
+            font-weight: 600;
+        }
+        .attendance {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .attendance th, .attendance td {
+            border-bottom: 1px solid var(--stroke);
+            padding: 8px 6px;
+            text-align: center;
+        }
+        .attendance th:first-child,
+        .attendance td:first-child {
+            text-align: left;
+        }
+        .sticky {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 1;
+        }
+        .row-name {
+            font-weight: 600;
+        }
+        .save-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Tygodniowa tabela</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+
+        <div class="week-nav">
+            <a class="ghost" th:href="@{/weekly(week=${prevWeek})}">Poprzedni tydzien</a>
+            <span class="week-label" th:text="${weekLabel}">01.01.2026 - 06.01.2026</span>
+            <a class="ghost" th:href="@{/weekly(week=${nextWeek})}">Nastepny tydzien</a>
+        </div>
+
+        <form method="post" action="/weekly/save">
+            <input type="hidden" name="weekStart" th:value="${weekStart}" />
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <table class="attendance">
+                <thead>
+                <tr>
+                    <th class="sticky">Osoba</th>
+                    <th class="sticky">Pon</th>
+                    <th class="sticky">Wt</th>
+                    <th class="sticky">Sr</th>
+                    <th class="sticky">Czw</th>
+                    <th class="sticky">Pt</th>
+                    <th class="sticky">Sb</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="person : ${people}">
+                    <td class="row-name" th:text="${person.displayName}">Osoba</td>
+                    <td th:each="day : ${days}">
+                        <input type="checkbox"
+                               th:name="'p_' + ${person.id} + '_'+ ${day.value}"
+                               th:checked="${presence[person.id] != null and presence[person.id].contains(day)}" />
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="save-bar">
+                <button type="submit" class="primary">Zapisz</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

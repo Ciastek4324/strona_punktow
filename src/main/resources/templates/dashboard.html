@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Dashboard</h1>
+            <form method="post" action="/logout">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="ghost">Wyloguj</button>
+            </form>
+        </div>
+        <div class="grid">
+            <a class="tile" href="/points/current">
+                <h2>Aktualne punkty</h2>
+                <p>Podglad biezacej listy punktow.</p>
+            </a>
+            <a class="tile" href="/weekly">
+                <h2>Tygodniowe tabele</h2>
+                <p>Obecnosc i tygodniowe zestawienia.</p>
+            </a>
+            <a class="tile" href="/generator">
+                <h2>Generator list</h2>
+                <p>Generuj nowa liste na podstawie poprzedniej.</p>
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
