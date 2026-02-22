@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.Customizer;
 import pl.punkty.app.security.GuestAuthenticationProvider;
 
 import java.util.List;
@@ -48,6 +49,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/login", "/guest", "/h2-console/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/points/current").hasAnyRole("ADMIN", "USER", "GUEST")
                 .anyRequest().hasAnyRole("ADMIN", "USER")
             )
@@ -56,6 +58,7 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/dashboard", true)
                 .permitAll()
             )
+            .httpBasic(Customizer.withDefaults())
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
