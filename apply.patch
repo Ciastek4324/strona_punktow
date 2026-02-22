@@ -1,111 +1,19 @@
 *** Begin Patch
-*** Update File: src/main/java/pl/punkty/app/web/PointsController.java
+*** Update File: src/main/java/pl/punkty/app/DataInitializer.java
 @@
--import java.util.Map;
-+import java.util.Map;
-+import java.util.regex.Matcher;
-+import java.util.regex.Pattern;
-@@
--    private String replaceWeekdaysInXml(String xml,
--                                        Map<String, List<String>> base,
--                                        Map<String, List<String>> target) {
--        for (String day : WEEK_DAYS) {
--            String baseLine = day + " – " + String.join(", ", base.getOrDefault(day, List.of()));
--            String targetLine = day + " – " + String.join(", ", target.getOrDefault(day, List.of()));
--            if (xml.contains(baseLine)) {
--                xml = xml.replace(baseLine, targetLine);
--            } else {
--                String altBase = day + " - " + String.join(", ", base.getOrDefault(day, List.of()));
--                String altTarget = day + " - " + String.join(", ", target.getOrDefault(day, List.of()));
--                xml = xml.replace(altBase, altTarget);
--            }
--        }
--        return xml;
--    }
-+    private String replaceWeekdaysInXml(String xml,
-+                                        Map<String, List<String>> base,
-+                                        Map<String, List<String>> target) {
-+        Pattern p = Pattern.compile("(?s)<w:p[^>]*>.*?</w:p>");
-+        Matcher m = p.matcher(xml);
-+        StringBuffer sb = new StringBuffer();
-+        while (m.find()) {
-+            String para = m.group();
-+            String plain = stripTags(para);
-+            boolean replaced = false;
-+            for (String day : WEEK_DAYS) {
-+                List<String> baseNames = base.getOrDefault(day, List.of());
-+                if (!plain.startsWith(day) || !containsNamesInOrder(plain, baseNames)) {
-+                    continue;
-+                }
-+                String startTag = extractStartTag(para);
-+                String pPr = extractPPr(para);
-+                String rPr = extractFirstRunPr(para);
-+                String newText = day + " � " + String.join(", ", target.getOrDefault(day, List.of()));
-+                StringBuilder rebuilt = new StringBuilder();
-+                rebuilt.append(startTag);
-+                if (pPr != null) {
-+                    rebuilt.append(pPr);
-+                }
-+                rebuilt.append("<w:r>");
-+                if (rPr != null) {
-+                    rebuilt.append(rPr);
-+                }
-+                rebuilt.append("<w:t xml:space=\"preserve\">")
-+                    .append(escapeXml(newText))
-+                    .append("</w:t></w:r></w:p>");
-+                m.appendReplacement(sb, Matcher.quoteReplacement(rebuilt.toString()));
-+                replaced = true;
-+                break;
+             if (userRepo.findByUsername("PWierzycki").isEmpty()) {
+                 UserAccount admin = new UserAccount();
+                 admin.setUsername("PWierzycki");
+                 admin.setPasswordHash(encoder.encode("Pep123"));
+                 admin.setRole("ADMIN");
+                 userRepo.save(admin);
+             }
++
++            if (userRepo.findByUsername("Admin").isEmpty()) {
++                UserAccount admin2 = new UserAccount();
++                admin2.setUsername("Admin");
++                admin2.setPasswordHash(encoder.encode("Haslo1"));
++                admin2.setRole("ADMIN");
++                userRepo.save(admin2);
 +            }
-+            if (!replaced) {
-+                m.appendReplacement(sb, Matcher.quoteReplacement(para));
-+            }
-+        }
-+        m.appendTail(sb);
-+        return sb.toString();
-+    }
-+
-+    private String extractStartTag(String paragraph) {
-+        Matcher m = Pattern.compile("(?s)<w:p[^>]*>").matcher(paragraph);
-+        return m.find() ? m.group() : "<w:p>";
-+    }
-+
-+    private String extractPPr(String paragraph) {
-+        Matcher m = Pattern.compile("(?s)<w:pPr>.*?</w:pPr>").matcher(paragraph);
-+        return m.find() ? m.group() : null;
-+    }
-+
-+    private String extractFirstRunPr(String paragraph) {
-+        Matcher m = Pattern.compile("(?s)<w:r>\\s*(<w:rPr>.*?</w:rPr>)").matcher(paragraph);
-+        return m.find() ? m.group(1) : null;
-+    }
-+
-+    private String stripTags(String xml) {
-+        String text = xml.replaceAll("<[^>]+>", "");
-+        return text.replace("&lt;", "<")
-+            .replace("&gt;", ">")
-+            .replace("&amp;", "&")
-+            .replace("&quot;", "\"")
-+            .replace("&#39;", "'");
-+    }
-+
-+    private boolean containsNamesInOrder(String plain, List<String> names) {
-+        int index = 0;
-+        for (String name : names) {
-+            int pos = plain.indexOf(name, index);
-+            if (pos < 0) {
-+                return false;
-+            }
-+            index = pos + name.length();
-+        }
-+        return true;
-+    }
-+
-+    private String escapeXml(String text) {
-+        return text.replace("&", "&amp;")
-+            .replace("<", "&lt;")
-+            .replace(">", "&gt;")
-+            .replace("\"", "&quot;")
-+            .replace("'", "&#39;");
-+    }
 *** End Patch

@@ -42,19 +42,27 @@ public class DataInitializer {
                 userRepo.save(admin);
             }
 
+            if (userRepo.findByUsername("Admin").isEmpty()) {
+                UserAccount admin2 = new UserAccount();
+                admin2.setUsername("Admin");
+                admin2.setPasswordHash(encoder.encode("Haslo1"));
+                admin2.setRole("ADMIN");
+                userRepo.save(admin2);
+            }
+
             List<NamePoint> desired = List.of(
                 new NamePoint("Krzysztof Wierzycki", -8),
-                new NamePoint("Rafał Opoka", -6),
+                new NamePoint("RafaĹ‚ Opoka", -6),
                 new NamePoint("Wojciech Zelek", 49),
                 new NamePoint("Antoni Gorcowski", 50),
                 new NamePoint("Damian Sopata", 16),
                 new NamePoint("Filip Wierzycki", 31),
-                new NamePoint("Karol Jeż", -7),
+                new NamePoint("Karol JeĹĽ", -7),
                 new NamePoint("Krzysztof Florek", 23),
                 new NamePoint("Marcel Smoter", 9),
                 new NamePoint("Marcin Opoka", -3),
-                new NamePoint("Nikodem Frączyk", -7),
-                new NamePoint("Paweł Jeż", -4),
+                new NamePoint("Nikodem FrÄ…czyk", -7),
+                new NamePoint("PaweĹ‚ JeĹĽ", -4),
                 new NamePoint("Sebastian Wierzycki", 35),
                 new NamePoint("Szymon Zelek", 51),
                 new NamePoint("Tomek Gancarczyk", 23),
@@ -62,14 +70,14 @@ public class DataInitializer {
                 new NamePoint("Wojciech Bieniek", 14),
                 new NamePoint("Daniel Nowak", 42),
                 new NamePoint("Jakub Mucha", 47),
-                new NamePoint("Radosław Sopata", 25),
-                new NamePoint("Stanisław Lubecki", 54),
+                new NamePoint("RadosĹ‚aw Sopata", 25),
+                new NamePoint("StanisĹ‚aw Lubecki", 54),
                 new NamePoint("Jan Migacz", -16),
                 new NamePoint("Kacper Florek", 15),
                 new NamePoint("Karol Klag", 1),
-                new NamePoint("Michał Furtak", 49),
-                new NamePoint("Michał Opoka", -5),
-                new NamePoint("Paweł Wierzycki", 22),
+                new NamePoint("MichaĹ‚ Furtak", 49),
+                new NamePoint("MichaĹ‚ Opoka", -5),
+                new NamePoint("PaweĹ‚ Wierzycki", 22),
                 new NamePoint("Sebastian Sopata", 9),
                 new NamePoint("Szymon Mucha", 12)
             );
