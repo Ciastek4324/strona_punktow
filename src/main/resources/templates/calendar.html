@@ -1,0 +1,41 @@
+﻿<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kalendarz tygodni</title>
+    <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Kalendarz tygodni</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+        <div class="row">
+            <div>
+                <div class="hint" th:if="${baselineDate != null}">
+                    Data ustawienia punktow: <strong th:text="${#temporals.format(baselineDate, 'dd.MM.yyyy')}">01.01.2026</strong>
+                </div>
+                <div class="hint" th:if="${baselineDate == null}">
+                    Nie ustawiono daty punktow. Ustaw date w aktualnych punktach.
+                </div>
+            </div>
+            <div class="row">
+                <a class="ghost" th:href="@{/calendar(year=${prevYear})}">Rok wstecz</a>
+                <div class="notice" th:text="${year}">2026</div>
+                <a class="ghost" th:href="@{/calendar(year=${nextYear})}">Rok dalej</a>
+            </div>
+        </div>
+        <div class="calendar-grid">
+            <div class="week-card" th:each="week : ${weeks}" th:classappend="${week.complete} ? 'status-green' : 'status-red'">
+                <div class="week-title" th:text="${#temporals.format(week.weekStart, 'dd.MM')} + ' - ' + ${#temporals.format(week.weekEnd, 'dd.MM')}">01.02 - 06.02</div>
+                <div class="week-state" th:text="${week.complete} ? 'Uzupelnione' : 'Nieuzupelnione'">Uzupelnione</div>
+                <a class="ghost" th:href="@{/weekly(week=${week.weekStart})}">Otworz tydzien</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

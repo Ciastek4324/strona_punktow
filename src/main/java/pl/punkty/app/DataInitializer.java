@@ -1,4 +1,4 @@
-package pl.punkty.app;
+﻿package pl.punkty.app;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -65,17 +65,17 @@ public class DataInitializer {
 
             List<NamePoint> desired = List.of(
                 new NamePoint("Krzysztof Wierzycki", -8),
-                new NamePoint("RafaĂ„Ä…Ă˘â‚¬Ĺˇ Opoka", -6),
+                new NamePoint("Rafał Opoka", -6),
                 new NamePoint("Wojciech Zelek", 49),
                 new NamePoint("Antoni Gorcowski", 50),
                 new NamePoint("Damian Sopata", 16),
                 new NamePoint("Filip Wierzycki", 31),
-                new NamePoint("Karol JeĂ„Ä…Ă„Ëť", -7),
+                new NamePoint("Karol Jeż", -7),
                 new NamePoint("Krzysztof Florek", 23),
                 new NamePoint("Marcel Smoter", 9),
                 new NamePoint("Marcin Opoka", -3),
-                new NamePoint("Nikodem FrÄ‚â€žĂ˘â‚¬Â¦czyk", -7),
-                new NamePoint("PaweĂ„Ä…Ă˘â‚¬Ĺˇ JeĂ„Ä…Ă„Ëť", -4),
+                new NamePoint("Nikodem Frączyk", -7),
+                new NamePoint("Paweł Jeż", -4),
                 new NamePoint("Sebastian Wierzycki", 35),
                 new NamePoint("Szymon Zelek", 51),
                 new NamePoint("Tomek Gancarczyk", 23),
@@ -83,14 +83,14 @@ public class DataInitializer {
                 new NamePoint("Wojciech Bieniek", 14),
                 new NamePoint("Daniel Nowak", 42),
                 new NamePoint("Jakub Mucha", 47),
-                new NamePoint("RadosĂ„Ä…Ă˘â‚¬Ĺˇaw Sopata", 25),
-                new NamePoint("StanisĂ„Ä…Ă˘â‚¬Ĺˇaw Lubecki", 54),
+                new NamePoint("Radosław Sopata", 25),
+                new NamePoint("Stanisław Lubecki", 54),
                 new NamePoint("Jan Migacz", -16),
                 new NamePoint("Kacper Florek", 15),
                 new NamePoint("Karol Klag", 1),
-                new NamePoint("MichaĂ„Ä…Ă˘â‚¬Ĺˇ Furtak", 49),
-                new NamePoint("MichaĂ„Ä…Ă˘â‚¬Ĺˇ Opoka", -5),
-                new NamePoint("PaweĂ„Ä…Ă˘â‚¬Ĺˇ Wierzycki", 22),
+                new NamePoint("Michał Furtak", 49),
+                new NamePoint("Michał Opoka", -5),
+                new NamePoint("Paweł Wierzycki", 22),
                 new NamePoint("Sebastian Sopata", 9),
                 new NamePoint("Szymon Mucha", 12)
             );

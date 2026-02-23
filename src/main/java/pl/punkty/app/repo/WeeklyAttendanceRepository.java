@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface WeeklyAttendanceRepository extends JpaRepository<WeeklyAttendance, Long> {
     List<WeeklyAttendance> findByTableRef(WeeklyTable tableRef);
+    List<WeeklyAttendance> findByTableRefIn(List<WeeklyTable> tableRefs);
     void deleteByTableRef(WeeklyTable tableRef);
 }

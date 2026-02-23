@@ -8,20 +8,26 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import pl.punkty.app.model.CurrentPoints;
 import pl.punkty.app.model.Person;
+import pl.punkty.app.model.PointsSnapshot;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.CurrentPointsRepository;
 import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.repo.PointsSnapshotRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,15 +46,18 @@ public class WeeklyController {
     private final WeeklyAttendanceRepository attendanceRepository;
     private final CurrentPointsRepository currentPointsRepository;
     private final PersonRepository personRepository;
+    private final PointsSnapshotRepository pointsSnapshotRepository;
 
     public WeeklyController(WeeklyTableRepository tableRepository,
                             WeeklyAttendanceRepository attendanceRepository,
                             CurrentPointsRepository currentPointsRepository,
-                            PersonRepository personRepository) {
+                            PersonRepository personRepository,
+                            PointsSnapshotRepository pointsSnapshotRepository) {
         this.tableRepository = tableRepository;
         this.attendanceRepository = attendanceRepository;
         this.currentPointsRepository = currentPointsRepository;
         this.personRepository = personRepository;
+        this.pointsSnapshotRepository = pointsSnapshotRepository;
     }
 
     @GetMapping("/weekly")
@@ -141,6 +150,50 @@ public class WeeklyController {
         return "redirect:/weekly?week=" + weekStart;
     }
 
+    @GetMapping("/calendar")
+    public String calendar(@RequestParam(required = false) Integer year, Model model) {
+        int selectedYear = (year == null) ? LocalDate.now().getYear() : year;
+        LocalDate yearStart = LocalDate.of(selectedYear, 1, 1);
+        LocalDate yearEnd = LocalDate.of(selectedYear, 12, 31);
+        LocalDate firstWeekStart = yearStart.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        List<WeeklyTable> tables = tableRepository.findAllByWeekStartBetween(firstWeekStart, yearEnd);
+        Map<Long, LocalDate> tableIdToWeek = new HashMap<>();
+        for (WeeklyTable table : tables) {
+            tableIdToWeek.put(table.getId(), table.getWeekStart());
+        }
+
+        Set<LocalDate> completedWeeks = new HashSet<>();
+        if (!tables.isEmpty()) {
+            for (WeeklyAttendance attendance : attendanceRepository.findByTableRefIn(tables)) {
+                LocalDate weekStart = tableIdToWeek.get(attendance.getTableRef().getId());
+                if (weekStart != null) {
+                    completedWeeks.add(weekStart);
+                }
+            }
+        }
+
+        Optional<PointsSnapshot> snapshot = pointsSnapshotRepository.findTopByOrderBySnapshotDateDesc();
+        LocalDate baselineDate = snapshot.map(PointsSnapshot::getSnapshotDate).orElse(null);
+
+        List<WeekStatus> weeks = new ArrayList<>();
+        for (LocalDate weekStart = firstWeekStart; !weekStart.isAfter(yearEnd); weekStart = weekStart.plusWeeks(1)) {
+            LocalDate weekEnd = weekStart.plusDays(5);
+            boolean complete = completedWeeks.contains(weekStart);
+            if (baselineDate != null && !weekStart.isAfter(baselineDate)) {
+                complete = true;
+            }
+            weeks.add(new WeekStatus(weekStart, weekEnd, complete));
+        }
+
+        model.addAttribute("weeks", weeks);
+        model.addAttribute("year", selectedYear);
+        model.addAttribute("baselineDate", baselineDate);
+        model.addAttribute("prevYear", selectedYear - 1);
+        model.addAttribute("nextYear", selectedYear + 1);
+        return "calendar";
+    }
+
     private String weekLabel(LocalDate weekStart) {
         LocalDate end = weekStart.plusDays(5);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yyyy");
@@ -153,4 +206,6 @@ public class WeeklyController {
         }
         return DayOfWeek.of(value);
     }
+
+    public record WeekStatus(LocalDate weekStart, LocalDate weekEnd, boolean complete) { }
 }

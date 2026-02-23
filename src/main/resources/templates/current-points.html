@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pl" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="utf-8" />
@@ -13,20 +13,32 @@
             <h1>Aktualne punkty</h1>
             <a class="ghost" href="/dashboard">Powrot</a>
         </div>
-        <table class="table">
-            <thead>
-            <tr>
-                <th>Osoba</th>
-                <th>Punkty</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="row : ${points}">
-                <td th:text="${row.person.displayName}">Osoba</td>
-                <td th:text="${row.points}">0</td>
-            </tr>
-            </tbody>
-        </table>
+        <form method="post" action="/points/current/save" class="stack">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <div class="row">
+                <label>
+                    Data ustawienia punktow
+                    <input type="date" name="snapshotDate" th:value="${snapshotDate}" />
+                </label>
+                <button type="submit" class="primary">Zapisz</button>
+            </div>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Osoba</th>
+                    <th>Punkty</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${rows}">
+                    <td th:text="${row.person.displayName}">Osoba</td>
+                    <td>
+                        <input type="number" step="1" th:name="${'p_' + row.person.id}" th:value="${row.points}" />
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </form>
     </div>
 </div>
 </body>
