@@ -10,9 +10,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import pl.punkty.app.model.Excuse;
+import pl.punkty.app.model.ExcuseStatus;
 import pl.punkty.app.repo.ExcuseRepository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Controller
@@ -56,16 +58,43 @@ public class ExcuseController {
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String excusesInbox(Model model) {
         List<Excuse> items = excuseRepository.findAllByOrderByCreatedAtDesc();
-        long unread = excuseRepository.countByReadFlagFalse();
-        if (unread > 0) {
+        long unread = excuseRepository.countByStatus(ExcuseStatus.PENDING);
+        if (!items.isEmpty()) {
             for (Excuse excuse : items) {
                 excuse.setReadFlag(true);
             }
             excuseRepository.saveAll(items);
-            unread = 0;
         }
         model.addAttribute("items", items);
         model.addAttribute("unread", unread);
         return "excuses-inbox";
+    }
+
+    @PostMapping("/excuses/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String approveExcuse(@RequestParam("id") Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String reviewer = auth != null ? auth.getName() : "user";
+        excuseRepository.findById(id).ifPresent(excuse -> {
+            excuse.setStatus(ExcuseStatus.APPROVED);
+            excuse.setReviewedAt(LocalDateTime.now());
+            excuse.setReviewedBy(reviewer);
+            excuseRepository.save(excuse);
+        });
+        return "redirect:/excuses/inbox";
+    }
+
+    @PostMapping("/excuses/reject")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String rejectExcuse(@RequestParam("id") Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String reviewer = auth != null ? auth.getName() : "user";
+        excuseRepository.findById(id).ifPresent(excuse -> {
+            excuse.setStatus(ExcuseStatus.REJECTED);
+            excuse.setReviewedAt(LocalDateTime.now());
+            excuse.setReviewedBy(reviewer);
+            excuseRepository.save(excuse);
+        });
+        return "redirect:/excuses/inbox";
     }
 }

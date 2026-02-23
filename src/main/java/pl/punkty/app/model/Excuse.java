@@ -21,6 +21,10 @@ public class Excuse {
     @Column(nullable = false, length = 1000)
     private String reason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ExcuseStatus status = ExcuseStatus.PENDING;
+
     @Column(nullable = false)
     private boolean readFlag = false;
 
@@ -29,6 +33,10 @@ public class Excuse {
 
     @Column(nullable = false)
     private String createdBy = "guest";
+
+    private LocalDateTime reviewedAt;
+
+    private String reviewedBy;
 
     public Long getId() {
         return id;
@@ -66,6 +74,14 @@ public class Excuse {
         this.reason = reason;
     }
 
+    public ExcuseStatus getStatus() {
+        return status == null ? ExcuseStatus.PENDING : status;
+    }
+
+    public void setStatus(ExcuseStatus status) {
+        this.status = status;
+    }
+
     public boolean isReadFlag() {
         return readFlag;
     }
@@ -88,5 +104,21 @@ public class Excuse {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getReviewedAt() {
+        return reviewedAt;
+    }
+
+    public void setReviewedAt(LocalDateTime reviewedAt) {
+        this.reviewedAt = reviewedAt;
+    }
+
+    public String getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(String reviewedBy) {
+        this.reviewedBy = reviewedBy;
     }
 }
