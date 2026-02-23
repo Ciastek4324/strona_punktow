@@ -29,6 +29,7 @@ public class AuthController {
 
     @PostMapping("/guest")
     public String loginAsGuest(HttpServletRequest request, HttpServletResponse response) {
+        request.getSession(true);
         Authentication authRequest = new GuestAuthenticationToken("guest");
         Authentication authResult = authenticationManager.authenticate(authRequest);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
