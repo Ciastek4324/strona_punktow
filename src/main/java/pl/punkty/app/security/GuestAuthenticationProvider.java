@@ -2,7 +2,6 @@ package pl.punkty.app.security;
 
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,15 +15,14 @@ public class GuestAuthenticationProvider implements AuthenticationProvider {
         if (!"guest".equals(principal)) {
             throw new BadCredentialsException("Invalid guest token");
         }
-        return new UsernamePasswordAuthenticationToken(
+        return new GuestAuthenticationToken(
             "guest",
-            "",
             List.of(new SimpleGrantedAuthority("ROLE_GUEST"))
         );
     }
 
     @Override
     public boolean supports(Class<?> authentication) {
-        return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
+        return GuestAuthenticationToken.class.isAssignableFrom(authentication);
     }
 }

@@ -1,7 +1,7 @@
 package pl.punkty.app.web;
 
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import pl.punkty.app.security.GuestAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -24,7 +24,7 @@ public class AuthController {
 
     @PostMapping("/guest")
     public String loginAsGuest() {
-        Authentication authRequest = new UsernamePasswordAuthenticationToken("guest", "");
+        Authentication authRequest = new GuestAuthenticationToken("guest");
         Authentication authResult = authenticationManager.authenticate(authRequest);
         SecurityContextHolder.getContext().setAuthentication(authResult);
         return "redirect:/points/current";
