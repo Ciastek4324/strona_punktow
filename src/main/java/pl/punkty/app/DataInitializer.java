@@ -71,11 +71,11 @@ public class DataInitializer {
             return null;
         }
         return input
-            .replace("Ä…", "a").replace("Ä‡", "c").replace("Ä™", "e")
-            .replace("Ĺ‚", "l").replace("Ĺ„", "n").replace("Ăl", "o")
-            .replace("Ĺ›", "s").replace("ĹĽ", "z").replace("Ĺş", "z")
-            .replace("Ä„", "A").replace("Ä†", "C").replace("Ä", "E")
-            .replace("Ĺ", "L").replace("Ĺ", "N").replace("Ă“", "O")
-            .replace("Ĺš", "S").replace("Ĺ»", "Z").replace("Ĺa", "Z");
+            .replace("\u0105", "a").replace("\u0107", "c").replace("\u0119", "e")
+            .replace("\u0142", "l").replace("\u0144", "n").replace("\u00f3", "o")
+            .replace("\u015b", "s").replace("\u017c", "z").replace("\u017a", "z")
+            .replace("\u0104", "A").replace("\u0106", "C").replace("\u0118", "E")
+            .replace("\u0141", "L").replace("\u0143", "N").replace("\u00d3", "O")
+            .replace("\u015a", "S").replace("\u017b", "Z").replace("\u0179", "Z");
     }
 }
