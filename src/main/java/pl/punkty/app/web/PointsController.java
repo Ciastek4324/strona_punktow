@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -60,11 +59,11 @@ import java.util.zip.ZipOutputStream;
 public class PointsController {
     private static final Locale LOCALE_PL = new Locale("pl", "PL");
     private static final List<String> WEEK_DAYS = List.of(
-        "PoniedziaĂ„Ä…Ă˘â‚¬Ĺˇek",
+        "Poniedzialek",
         "Wtorek",
-        "Ă„Ä…ÄąË‡roda",
+        "Sroda",
         "Czwartek",
-        "PiÄ‚â€žĂ˘â‚¬Â¦tek",
+        "Piatek",
         "Sobota"
     );
 
@@ -242,6 +241,7 @@ public class PointsController {
 
         return "generator";
     }
+
     @PostMapping("/points/snapshot/create")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String createPointsSnapshot(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -410,7 +410,7 @@ public class PointsController {
 
             XWPFTable table = doc.createTable(pointsRows.size() + 1, 4);
             setCellText(table.getRow(0).getCell(0), "Osoba", true);
-            setCellText(table.getRow(0).getCell(1), "Punkty od poczÄ‚â€žĂ˘â‚¬Â¦tku", true);
+            setCellText(table.getRow(0).getCell(1), "Punkty od poczatku", true);
             setCellText(table.getRow(0).getCell(2), "Punkty " + monthName, true);
             setCellText(table.getRow(0).getCell(3), "Punkty razem", true);
 
@@ -470,6 +470,7 @@ public class PointsController {
         }
         return xml;
     }
+
     private String replaceWeekdaysInXml(String xml,
                                         Map<String, List<String>> base,
                                         Map<String, List<String>> target) {
@@ -512,7 +513,6 @@ public class PointsController {
         m.appendTail(sb);
         return sb.toString();
     }
-
     private String extractStartTag(String paragraph) {
         Matcher m = Pattern.compile("(?s)<w:p[^>]*>").matcher(paragraph);
         return m.find() ? m.group() : "<w:p>";
@@ -559,43 +559,44 @@ public class PointsController {
 
     private Map<String, List<String>> sundayData() {
         Map<String, List<String>> sunday = new LinkedHashMap<>();
-        sunday.put("PRYMARIA (aspiranci)", List.of("RafaĂ„Ä…Ă˘â‚¬Ĺˇ Opoka"));
+        sunday.put("PRYMARIA (aspiranci)", List.of("Rafal Opoka"));
         sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
-        sunday.put("PRYMARIA (lektorzy)", List.of("StanisĂ„Ä…Ă˘â‚¬Ĺˇaw Lubecki", "Kacper Florek", "MichaĂ„Ä…Ă˘â‚¬Ĺˇ Furtak"));
+        sunday.put("PRYMARIA (lektorzy)", List.of("Stanislaw Lubecki", "Kacper Florek", "Michal Furtak"));
         sunday.put("SUMA (aspiranci)", List.of("Wojciech Zelek"));
         sunday.put("SUMA (ministranci)", List.of("Szymon Zelek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
         sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
         sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
-        sunday.put("III MSZA (ministranci)", List.of("Nikodem FrÄ‚â€žĂ˘â‚¬Â¦czyk", "Damian Sopata", "Karol JeĂ„Ä…Ă„Ëť", "PaweĂ„Ä…Ă˘â‚¬Ĺˇ JeĂ„Ä…Ă„Ëť"));
-        sunday.put("III MSZA (lektorzy)", List.of("PaweĂ„Ä…Ă˘â‚¬Ĺˇ Wierzycki", "Sebastian Sopata", "RadosĂ„Ä…Ă˘â‚¬Ĺˇaw Sopata", "Karol Klag"));
+        sunday.put("III MSZA (ministranci)", List.of("Nikodem Franczyk", "Damian Sopata", "Karol Jez", "Pawel Jez"));
+        sunday.put("III MSZA (lektorzy)", List.of("Pawel Wierzycki", "Sebastian Sopata", "Radoslaw Sopata", "Karol Klag"));
         return sunday;
     }
 
     private Map<String, List<String>> weekdayMinistranci() {
         Map<String, List<String>> weekdayMinistranci = new LinkedHashMap<>();
-        weekdayMinistranci.put("PoniedziaĂ„Ä…Ă˘â‚¬Ĺˇek", List.of("Nikodem FrÄ‚â€žĂ˘â‚¬Â¦czyk", "Krzysztof Florek"));
+        weekdayMinistranci.put("Poniedzialek", List.of("Nikodem Franczyk", "Krzysztof Florek"));
         weekdayMinistranci.put("Wtorek", List.of("Tomasz Gancarczyk", "Marcin Opoka"));
-        weekdayMinistranci.put("Ă„Ä…ÄąË‡roda", List.of("Damian Sopata", "Karol JeĂ„Ä…Ă„Ëť", "PaweĂ„Ä…Ă˘â‚¬Ĺˇ JeĂ„Ä…Ă„Ëť"));
+        weekdayMinistranci.put("Sroda", List.of("Damian Sopata", "Karol Jez", "Pawel Jez"));
         weekdayMinistranci.put("Czwartek", List.of("Szymon Zelek", "Antoni Gorcowski"));
-        weekdayMinistranci.put("PiÄ‚â€žĂ˘â‚¬Â¦tek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
+        weekdayMinistranci.put("Piatek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
         weekdayMinistranci.put("Sobota", List.of("Filip Wierzycki", "Wiktor Wierzycki", "Marcel Smoter"));
         return weekdayMinistranci;
     }
 
     private Map<String, List<String>> weekdayLektorzy() {
         Map<String, List<String>> weekdayLektorzy = new LinkedHashMap<>();
-        weekdayLektorzy.put("PoniedziaĂ„Ä…Ă˘â‚¬Ĺˇek", List.of("Kacper Florek", "Karol Klag"));
-        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "RadosĂ„Ä…Ă˘â‚¬Ĺˇaw Sopata"));
-        weekdayLektorzy.put("Ă„Ä…ÄąË‡roda", List.of("PaweĂ„Ä…Ă˘â‚¬Ĺˇ Wierzycki", "Daniel Nowak"));
-        weekdayLektorzy.put("Czwartek", List.of("MichaĂ„Ä…Ă˘â‚¬Ĺˇ Furtak"));
-        weekdayLektorzy.put("PiÄ‚â€žĂ˘â‚¬Â¦tek", List.of("StanisĂ„Ä…Ă˘â‚¬Ĺˇaw Lubecki", "Jan Migacz"));
+        weekdayLektorzy.put("Poniedzialek", List.of("Kacper Florek", "Karol Klag"));
+        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "Radoslaw Sopata"));
+        weekdayLektorzy.put("Sroda", List.of("Pawel Wierzycki", "Daniel Nowak"));
+        weekdayLektorzy.put("Czwartek", List.of("Michal Furtak"));
+        weekdayLektorzy.put("Piatek", List.of("Stanislaw Lubecki", "Jan Migacz"));
         weekdayLektorzy.put("Sobota", List.of("Szymon Mucha", "Jakub Mucha"));
         return weekdayLektorzy;
     }
 
     private List<String> weekdayAspiranci() {
-        return List.of("Krzysztof Wierzycki", "RafaĂ„Ä…Ă˘â‚¬Ĺˇ Opoka", "Wojciech Zelek");
+        return List.of("Krzysztof Wierzycki", "Rafal Opoka", "Wojciech Zelek");
     }
+
     private int monthOffsetFromBase(LocalDate date) {
         YearMonth base = YearMonth.of(2026, 2);
         YearMonth target = YearMonth.of(date.getYear(), date.getMonth());
@@ -622,36 +623,36 @@ public class PointsController {
 
     private String monthName(LocalDate date) {
         return switch (date.getMonthValue()) {
-            case 1 -> "STYCZEĂ„Ä…Ă‚Â";
+            case 1 -> "STYCZEN";
             case 2 -> "LUTY";
             case 3 -> "MARZEC";
-            case 4 -> "KWIECIEĂ„Ä…Ă‚Â";
+            case 4 -> "KWIECIEN";
             case 5 -> "MAJ";
             case 6 -> "CZERWIEC";
             case 7 -> "LIPIEC";
-            case 8 -> "SIERPIEĂ„Ä…Ă‚Â";
-            case 9 -> "WRZESIEĂ„Ä…Ă‚Â";
-            case 10 -> "PAĂ„Ä…Ă„â€¦DZIERNIK";
+            case 8 -> "SIERPIEN";
+            case 9 -> "WRZESIEN";
+            case 10 -> "PAZDZIERNIK";
             case 11 -> "LISTOPAD";
-            case 12 -> "GRUDZIEĂ„Ä…Ă‚Â";
+            case 12 -> "GRUDZIEN";
             default -> date.getMonth().getDisplayName(TextStyle.FULL, LOCALE_PL).toUpperCase(LOCALE_PL);
         };
     }
 
     private List<String> monthNames() {
         return List.of(
-            "STYCZEĂ„Ä…Ă‚Â",
+            "STYCZEN",
             "LUTY",
             "MARZEC",
-            "KWIECIEĂ„Ä…Ă‚Â",
+            "KWIECIEN",
             "MAJ",
             "CZERWIEC",
             "LIPIEC",
-            "SIERPIEĂ„Ä…Ă‚Â",
-            "WRZESIEĂ„Ä…Ă‚Â",
-            "PAĂ„Ä…Ă„â€¦DZIERNIK",
+            "SIERPIEN",
+            "WRZESIEN",
+            "PAZDZIERNIK",
             "LISTOPAD",
-            "GRUDZIEĂ„Ä…Ă‚Â"
+            "GRUDZIEN"
         );
     }
 

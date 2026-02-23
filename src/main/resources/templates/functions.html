@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Funkcje</title>
+    <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Funkcje</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Osoba</th>
+                <th>Funkcja</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="person : ${people}">
+                <td th:text="${person.displayName}">Osoba</td>
+                <td>
+                    <form method="post" action="/functions/update" class="row" style="justify-content:flex-start; gap:8px; margin:0;">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="hidden" name="personId" th:value="${person.id}" />
+                        <select name="role">
+                            <option th:each="role : ${roles}" th:value="${role}"
+                                    th:selected="${role == person.role}" th:text="${role}">
+                            </option>
+                        </select>
+                        <button type="submit" class="ghost">Zapisz</button>
+                    </form>
+                </td>
+                <td></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
