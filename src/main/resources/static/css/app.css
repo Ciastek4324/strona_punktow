@@ -193,6 +193,17 @@ button:hover, .ghost:hover, .primary:hover {
     font-size: 0.9rem;
 }
 
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+    background: #d62828;
+    border-radius: 50%;
+    margin-left: 8px;
+}
+
 @media print {
     body {
         background: #fff;

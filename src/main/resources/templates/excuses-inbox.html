@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Usprawiedliwienia</title>
+    <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Usprawiedliwienia</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+
+        <div class="notice" th:if="${items.isEmpty()}">Brak usprawiedliwien.</div>
+
+        <table class="table" th:if="${!items.isEmpty()}">
+            <thead>
+            <tr>
+                <th>Osoba</th>
+                <th>Data</th>
+                <th>Powod</th>
+                <th>Dodane</th>
+                <th>Przez</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${items}">
+                <td th:text="${item.fullName}">Osoba</td>
+                <td>
+                    <span th:if="${item.dateFrom != null and item.dateTo != null}" th:text="${#temporals.format(item.dateFrom, 'dd.MM.yyyy')} + ' - ' + ${#temporals.format(item.dateTo, 'dd.MM.yyyy')}">01.01.2026 - 02.01.2026</span>
+                    <span th:if="${item.dateFrom != null and item.dateTo == null}" th:text="${#temporals.format(item.dateFrom, 'dd.MM.yyyy')}">01.01.2026</span>
+                    <span th:if="${item.dateFrom == null and item.dateTo != null}" th:text="${#temporals.format(item.dateTo, 'dd.MM.yyyy')}">02.01.2026</span>
+                    <span th:if="${item.dateFrom == null and item.dateTo == null}">-</span>
+                </td>
+                <td th:text="${item.reason}">Powod</td>
+                <td th:text="${#temporals.format(item.createdAt, 'dd.MM.yyyy HH:mm')}">01.01.2026</td>
+                <td th:text="${item.createdBy}">guest</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

@@ -17,6 +17,7 @@ import pl.punkty.app.model.PointsSnapshot;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.CurrentPointsRepository;
+import pl.punkty.app.repo.ExcuseRepository;
 import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.PointsSnapshotRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
@@ -58,25 +59,29 @@ public class PointsController {
     private final PointsSnapshotRepository pointsSnapshotRepository;
     private final WeeklyTableRepository weeklyTableRepository;
     private final WeeklyAttendanceRepository weeklyAttendanceRepository;
+    private final ExcuseRepository excuseRepository;
 
     public PointsController(CurrentPointsRepository currentPointsRepository,
                             PersonRepository personRepository,
                             PointsSnapshotRepository pointsSnapshotRepository,
                             WeeklyTableRepository weeklyTableRepository,
-                            WeeklyAttendanceRepository weeklyAttendanceRepository) {
+                            WeeklyAttendanceRepository weeklyAttendanceRepository,
+                            ExcuseRepository excuseRepository) {
         this.currentPointsRepository = currentPointsRepository;
         this.personRepository = personRepository;
         this.pointsSnapshotRepository = pointsSnapshotRepository;
         this.weeklyTableRepository = weeklyTableRepository;
         this.weeklyAttendanceRepository = weeklyAttendanceRepository;
+        this.excuseRepository = excuseRepository;
     }
 
     @GetMapping("/dashboard")
-    public String dashboard() {
+    public String dashboard(Model model) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"))) {
             return "redirect:/points/current";
         }
+        model.addAttribute("unreadExcuses", excuseRepository.countByReadFlagFalse());
         return "dashboard";
     }
 
