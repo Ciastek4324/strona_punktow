@@ -9,8 +9,13 @@ public class Person {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String displayName;
+
+    @Enumerated(EnumType.STRING)
+    private PersonRole role = PersonRole.MINISTRANT;
+
+    private Integer basePoints = 0;
 
     public Long getId() {
         return id;
@@ -22,5 +27,21 @@ public class Person {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public PersonRole getRole() {
+        return role == null ? PersonRole.MINISTRANT : role;
+    }
+
+    public void setRole(PersonRole role) {
+        this.role = role;
+    }
+
+    public int getBasePoints() {
+        return basePoints == null ? 0 : basePoints;
+    }
+
+    public void setBasePoints(int basePoints) {
+        this.basePoints = basePoints;
     }
 }

@@ -12,10 +12,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import pl.punkty.app.model.CurrentPoints;
 import pl.punkty.app.model.Person;
+import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.model.PointsSnapshot;
+import pl.punkty.app.model.WeeklyAttendance;
+import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.CurrentPointsRepository;
 import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.PointsSnapshotRepository;
+import pl.punkty.app.repo.WeeklyAttendanceRepository;
+import pl.punkty.app.repo.WeeklyTableRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +35,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -50,13 +56,19 @@ public class PointsController {
     private final CurrentPointsRepository currentPointsRepository;
     private final PersonRepository personRepository;
     private final PointsSnapshotRepository pointsSnapshotRepository;
+    private final WeeklyTableRepository weeklyTableRepository;
+    private final WeeklyAttendanceRepository weeklyAttendanceRepository;
 
     public PointsController(CurrentPointsRepository currentPointsRepository,
                             PersonRepository personRepository,
-                            PointsSnapshotRepository pointsSnapshotRepository) {
+                            PointsSnapshotRepository pointsSnapshotRepository,
+                            WeeklyTableRepository weeklyTableRepository,
+                            WeeklyAttendanceRepository weeklyAttendanceRepository) {
         this.currentPointsRepository = currentPointsRepository;
         this.personRepository = personRepository;
         this.pointsSnapshotRepository = pointsSnapshotRepository;
+        this.weeklyTableRepository = weeklyTableRepository;
+        this.weeklyAttendanceRepository = weeklyAttendanceRepository;
     }
 
     @GetMapping("/dashboard")
@@ -135,11 +147,13 @@ public class PointsController {
 
     @GetMapping("/generator")
     public String generator(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                            @RequestParam(required = false, defaultValue = "monthly") String tab,
                             Model model) {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
         model.addAttribute("dateParam", effectiveDate.toString());
+        model.addAttribute("tab", tab);
 
         model.addAttribute("sunday", sundayData());
         Map<String, List<String>> weekdayMinistranciShifted = shiftWeekday(weekdayMinistranci(), monthOffsetFromBase(effectiveDate));
@@ -148,7 +162,63 @@ public class PointsController {
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
         model.addAttribute("weekdayAspiranci", weekdayAspiranci());
 
+        List<Person> people = personRepository.findAll().stream()
+            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
+            .toList();
+
+        Map<Long, Integer> monthPoints = monthPoints(effectiveDate);
+        List<PointsRow> pointsRows = new ArrayList<>();
+        for (Person person : people) {
+            int base = person.getBasePoints();
+            int month = monthPoints.getOrDefault(person.getId(), 0);
+            pointsRows.add(new PointsRow(person, base, month, base + month));
+        }
+        model.addAttribute("pointsRows", pointsRows);
+        model.addAttribute("roles", PersonRole.values());
+
         return "generator";
+    }
+
+    @PostMapping("/people/add")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String addPerson(@RequestParam("displayName") String displayName,
+                            @RequestParam("role") PersonRole role,
+                            @RequestParam("basePoints") int basePoints,
+                            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                            @RequestParam(required = false, defaultValue = "points") String tab) {
+        String name = displayName.trim();
+        if (!name.isEmpty() && personRepository.findByDisplayNameIgnoreCase(name).isEmpty()) {
+            Person person = new Person();
+            person.setDisplayName(name);
+            person.setRole(role);
+            person.setBasePoints(basePoints);
+            personRepository.save(person);
+        }
+        return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
+    }
+
+    @PostMapping("/people/update")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String updatePerson(@RequestParam("personId") Long personId,
+                               @RequestParam("role") PersonRole role,
+                               @RequestParam("basePoints") int basePoints,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                               @RequestParam(required = false, defaultValue = "points") String tab) {
+        personRepository.findById(personId).ifPresent(person -> {
+            person.setRole(role);
+            person.setBasePoints(basePoints);
+            personRepository.save(person);
+        });
+        return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
+    }
+
+    @PostMapping("/people/delete")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String deletePerson(@RequestParam("personId") Long personId,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                               @RequestParam(required = false, defaultValue = "points") String tab) {
+        personRepository.deleteById(personId);
+        return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
     @GetMapping("/generator/print")
@@ -410,6 +480,26 @@ public class PointsController {
         return String.format("%02d.%02d.%04d", date.getDayOfMonth(), date.getMonthValue(), date.getYear());
     }
 
+    private Map<Long, Integer> monthPoints(LocalDate date) {
+        YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+        List<WeeklyTable> tables = weeklyTableRepository.findAllByWeekStartBetween(start.minusDays(7), end);
+        Map<Long, Integer> points = new LinkedHashMap<>();
+        if (tables.isEmpty()) {
+            return points;
+        }
+        for (WeeklyAttendance attendance : weeklyAttendanceRepository.findByTableRefIn(tables)) {
+            LocalDate weekStart = attendance.getTableRef().getWeekStart();
+            if (weekStart == null || weekStart.isBefore(start.minusDays(7)) || weekStart.isAfter(end)) {
+                continue;
+            }
+            Long personId = attendance.getPerson().getId();
+            points.put(personId, points.getOrDefault(personId, 0) + 1);
+        }
+        return points;
+    }
+
     public static class PersonRow {
         private final Person person;
         private final int points;
@@ -425,6 +515,36 @@ public class PointsController {
 
         public int getPoints() {
             return points;
+        }
+    }
+
+    public static class PointsRow {
+        private final Person person;
+        private final int basePoints;
+        private final int monthPoints;
+        private final int total;
+
+        public PointsRow(Person person, int basePoints, int monthPoints, int total) {
+            this.person = person;
+            this.basePoints = basePoints;
+            this.monthPoints = monthPoints;
+            this.total = total;
+        }
+
+        public Person getPerson() {
+            return person;
+        }
+
+        public int getBasePoints() {
+            return basePoints;
+        }
+
+        public int getMonthPoints() {
+            return monthPoints;
+        }
+
+        public int getTotal() {
+            return total;
         }
     }
 }
