@@ -8,6 +8,9 @@ import pl.punkty.app.repo.ExcuseRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class ExcuseService {
@@ -40,6 +43,14 @@ public class ExcuseService {
 
     public List<Excuse> listAll() {
         return excuseRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    public Page<Excuse> listPage(int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), 200);
+        int safePage = Math.max(page, 0);
+        return excuseRepository.findAllByOrderByCreatedAtDesc(
+            PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending())
+        );
     }
 
     public long countPending() {

@@ -16,6 +16,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import pl.punkty.app.model.CurrentPoints;
 import pl.punkty.app.model.ExcuseStatus;
 import pl.punkty.app.model.MonthlyPointsSnapshot;
@@ -193,14 +196,19 @@ public class PointsController {
 
     @GetMapping("/points/history")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public String pointsHistory(@RequestParam(required = false) String q, Model model) {
-        List<PointsHistory> all = pointsHistoryRepository.findAllByOrderByChangedAtDesc();
-        String query = q == null ? "" : q.trim().toLowerCase(LOCALE_PL);
-        List<PointsHistory> filtered = all.stream()
-            .filter(h -> query.isEmpty() || h.getPerson().getDisplayName().toLowerCase(LOCALE_PL).contains(query))
-            .toList();
-        model.addAttribute("items", filtered);
-        model.addAttribute("q", q == null ? "" : q);
+    public String pointsHistory(@RequestParam(required = false) String q,
+                                @RequestParam(required = false, defaultValue = "0") int page,
+                                Model model) {
+        int safePage = Math.max(page, 0);
+        PageRequest pageRequest = PageRequest.of(safePage, 100, Sort.by("changedAt").descending());
+        String query = q == null ? "" : q.trim();
+        Page<PointsHistory> pageData = query.isEmpty()
+            ? pointsHistoryRepository.findAllByOrderByChangedAtDesc(pageRequest)
+            : pointsHistoryRepository.findAllByPersonDisplayNameContainingIgnoreCaseOrderByChangedAtDesc(query, pageRequest);
+        model.addAttribute("items", pageData.getContent());
+        model.addAttribute("q", query);
+        model.addAttribute("page", safePage);
+        model.addAttribute("totalPages", pageData.getTotalPages());
         return "points-history";
     }
 
@@ -232,7 +240,9 @@ public class PointsController {
         }
         model.addAttribute("pointsRows", pointsRows);
         model.addAttribute("roles", PersonRole.values());
-        model.addAttribute("snapshots", monthlyPointsSnapshotRepository.findAllByOrderByCreatedAtDesc());
+        model.addAttribute("snapshots", monthlyPointsSnapshotRepository.findAllByOrderByCreatedAtDesc(
+            PageRequest.of(0, 12, Sort.by("createdAt").descending())
+        ).getContent());
 
         return "generator";
     }

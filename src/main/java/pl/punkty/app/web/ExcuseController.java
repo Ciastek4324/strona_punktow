@@ -13,8 +13,8 @@ import pl.punkty.app.model.Excuse;
 import pl.punkty.app.service.ExcuseService;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
 
 @Controller
 public class ExcuseController {
@@ -48,12 +48,17 @@ public class ExcuseController {
 
     @GetMapping("/excuses/inbox")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public String excusesInbox(Model model) {
-        List<Excuse> items = excuseService.listAll();
+    public String excusesInbox(@RequestParam(required = false, defaultValue = "0") int page,
+                               Model model) {
+        int safePage = Math.max(page, 0);
+        Page<Excuse> itemsPage = excuseService.listPage(safePage, 50);
+        List<Excuse> items = itemsPage.getContent();
         long unread = excuseService.countPending();
         excuseService.markAllRead(items);
         model.addAttribute("items", items);
         model.addAttribute("unread", unread);
+        model.addAttribute("page", safePage);
+        model.addAttribute("totalPages", itemsPage.getTotalPages());
         return "excuses-inbox";
     }
 

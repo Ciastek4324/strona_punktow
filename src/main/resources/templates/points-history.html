@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Historia punktow</title>
+    <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Historia punktow</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+
+        <form method="get" action="/points/history" class="row" style="gap:10px;">
+            <input type="text" name="q" th:value="${q}" placeholder="Szukaj osoby" />
+            <button type="submit" class="primary">Szukaj</button>
+        </form>
+
+        <div class="notice" th:if="${items.isEmpty()}">Brak zmian.</div>
+
+        <table class="table" th:if="${!items.isEmpty()}">
+            <thead>
+            <tr>
+                <th>Osoba</th>
+                <th>Stare</th>
+                <th>Nowe</th>
+                <th>Kto</th>
+                <th>Kiedy</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${items}">
+                <td th:text="${item.person.displayName}">Osoba</td>
+                <td th:text="${item.oldPoints}">0</td>
+                <td th:text="${item.newPoints}">0</td>
+                <td th:text="${item.changedBy}">user</td>
+                <td th:text="${#temporals.format(item.changedAt, 'dd.MM.yyyy HH:mm')}">01.01.2026</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="row" th:if="${totalPages > 1}">
+            <a class="ghost" th:if="${page > 0}" th:href="@{/points/history(q=${q},page=${page-1})}">Poprzednia</a>
+            <span class="hint">Strona <span th:text="${page + 1}">1</span> z <span th:text="${totalPages}">1</span></span>
+            <a class="ghost" th:if="${page + 1 < totalPages}" th:href="@{/points/history(q=${q},page=${page+1})}">Nastepna</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
