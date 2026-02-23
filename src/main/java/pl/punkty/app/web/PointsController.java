@@ -1,6 +1,11 @@
 package pl.punkty.app.web;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -47,11 +52,11 @@ import java.util.zip.ZipOutputStream;
 @Controller
 public class PointsController {
     private static final List<String> WEEK_DAYS = List.of(
-        "Poniedziałek",
+        "PoniedziaĹ‚ek",
         "Wtorek",
-        "Środa",
+        "Ĺšroda",
         "Czwartek",
-        "Piątek",
+        "PiÄ…tek",
         "Sobota"
     );
 
@@ -271,6 +276,53 @@ public class PointsController {
         return "points-print";
     }
 
+    @GetMapping("/points/docm")
+    public void pointsDocm(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                           HttpServletResponse response) throws IOException {
+        LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
+        String monthName = monthName(effectiveDate);
+
+        List<Person> people = personRepository.findAll().stream()
+            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
+            .toList();
+        Map<Long, Integer> monthPoints = monthPoints(effectiveDate);
+        List<PointsRow> pointsRows = new ArrayList<>();
+        for (Person person : people) {
+            int base = person.getBasePoints();
+            int month = monthPoints.getOrDefault(person.getId(), 0);
+            pointsRows.add(new PointsRow(person, base, month, base + month));
+        }
+
+        response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
+        response.setHeader("Content-Disposition", "attachment; filename=\"punkty-" + effectiveDate.getYear() + "-" + String.format("%02d", effectiveDate.getMonthValue()) + ".docm\"");
+
+        try (XWPFDocument doc = new XWPFDocument(); OutputStream out = response.getOutputStream()) {
+            XWPFParagraph title = doc.createParagraph();
+            XWPFRun titleRun = title.createRun();
+            titleRun.setText("Punkty - " + monthName);
+            titleRun.setFontFamily("Dosis");
+            titleRun.setFontSize(16);
+            titleRun.setBold(true);
+
+            XWPFTable table = doc.createTable(pointsRows.size() + 1, 4);
+            setCellText(table.getRow(0).getCell(0), "Osoba", true);
+            setCellText(table.getRow(0).getCell(1), "Punkty od poczÄ…tku", true);
+            setCellText(table.getRow(0).getCell(2), "Punkty " + monthName, true);
+            setCellText(table.getRow(0).getCell(3), "Punkty razem", true);
+
+            int rowIdx = 1;
+            for (PointsRow row : pointsRows) {
+                XWPFTableRow tr = table.getRow(rowIdx++);
+                setCellText(tr.getCell(0), row.getPerson().getDisplayName(), false);
+                setCellText(tr.getCell(1), Integer.toString(row.getBasePoints()), false);
+                setCellText(tr.getCell(2), Integer.toString(row.getMonthPoints()), false);
+                setCellText(tr.getCell(3), Integer.toString(row.getTotal()), false);
+            }
+
+            doc.write(out);
+        }
+    }
+
     @GetMapping("/generator/docx")
     public void generatorDocx(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                               HttpServletResponse response) throws IOException {
@@ -404,42 +456,42 @@ public class PointsController {
 
     private Map<String, List<String>> sundayData() {
         Map<String, List<String>> sunday = new LinkedHashMap<>();
-        sunday.put("PRYMARIA (aspiranci)", List.of("Rafał Opoka"));
+        sunday.put("PRYMARIA (aspiranci)", List.of("RafaĹ‚ Opoka"));
         sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
-        sunday.put("PRYMARIA (lektorzy)", List.of("Stanisław Lubecki", "Kacper Florek", "Michał Furtak"));
+        sunday.put("PRYMARIA (lektorzy)", List.of("StanisĹ‚aw Lubecki", "Kacper Florek", "MichaĹ‚ Furtak"));
         sunday.put("SUMA (aspiranci)", List.of("Wojciech Zelek"));
         sunday.put("SUMA (ministranci)", List.of("Szymon Zelek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
         sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
         sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
-        sunday.put("III MSZA (ministranci)", List.of("Nikodem Frączyk", "Damian Sopata", "Karol Jeż", "Paweł Jeż"));
-        sunday.put("III MSZA (lektorzy)", List.of("Paweł Wierzycki", "Sebastian Sopata", "Radosław Sopata", "Karol Klag"));
+        sunday.put("III MSZA (ministranci)", List.of("Nikodem FrÄ…czyk", "Damian Sopata", "Karol JeĹĽ", "PaweĹ‚ JeĹĽ"));
+        sunday.put("III MSZA (lektorzy)", List.of("PaweĹ‚ Wierzycki", "Sebastian Sopata", "RadosĹ‚aw Sopata", "Karol Klag"));
         return sunday;
     }
 
     private Map<String, List<String>> weekdayMinistranci() {
         Map<String, List<String>> weekdayMinistranci = new LinkedHashMap<>();
-        weekdayMinistranci.put("Poniedziałek", List.of("Nikodem Frączyk", "Krzysztof Florek"));
+        weekdayMinistranci.put("PoniedziaĹ‚ek", List.of("Nikodem FrÄ…czyk", "Krzysztof Florek"));
         weekdayMinistranci.put("Wtorek", List.of("Tomasz Gancarczyk", "Marcin Opoka"));
-        weekdayMinistranci.put("Środa", List.of("Damian Sopata", "Karol Jeż", "Paweł Jeż"));
+        weekdayMinistranci.put("Ĺšroda", List.of("Damian Sopata", "Karol JeĹĽ", "PaweĹ‚ JeĹĽ"));
         weekdayMinistranci.put("Czwartek", List.of("Szymon Zelek", "Antoni Gorcowski"));
-        weekdayMinistranci.put("Piątek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
+        weekdayMinistranci.put("PiÄ…tek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
         weekdayMinistranci.put("Sobota", List.of("Filip Wierzycki", "Wiktor Wierzycki", "Marcel Smoter"));
         return weekdayMinistranci;
     }
 
     private Map<String, List<String>> weekdayLektorzy() {
         Map<String, List<String>> weekdayLektorzy = new LinkedHashMap<>();
-        weekdayLektorzy.put("Poniedziałek", List.of("Kacper Florek", "Karol Klag"));
-        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "Radosław Sopata"));
-        weekdayLektorzy.put("Środa", List.of("Paweł Wierzycki", "Daniel Nowak"));
-        weekdayLektorzy.put("Czwartek", List.of("Michał Furtak"));
-        weekdayLektorzy.put("Piątek", List.of("Stanisław Lubecki", "Jan Migacz"));
+        weekdayLektorzy.put("PoniedziaĹ‚ek", List.of("Kacper Florek", "Karol Klag"));
+        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "RadosĹ‚aw Sopata"));
+        weekdayLektorzy.put("Ĺšroda", List.of("PaweĹ‚ Wierzycki", "Daniel Nowak"));
+        weekdayLektorzy.put("Czwartek", List.of("MichaĹ‚ Furtak"));
+        weekdayLektorzy.put("PiÄ…tek", List.of("StanisĹ‚aw Lubecki", "Jan Migacz"));
         weekdayLektorzy.put("Sobota", List.of("Szymon Mucha", "Jakub Mucha"));
         return weekdayLektorzy;
     }
 
     private List<String> weekdayAspiranci() {
-        return List.of("Krzysztof Wierzycki", "Rafał Opoka", "Wojciech Zelek");
+        return List.of("Krzysztof Wierzycki", "RafaĹ‚ Opoka", "Wojciech Zelek");
     }
 
     private int monthOffsetFromBase(LocalDate date) {
@@ -468,36 +520,36 @@ public class PointsController {
 
     private String monthName(LocalDate date) {
         return switch (date.getMonthValue()) {
-            case 1 -> "STYCZEŃ";
+            case 1 -> "STYCZEĹ";
             case 2 -> "LUTY";
             case 3 -> "MARZEC";
-            case 4 -> "KWIECIEŃ";
+            case 4 -> "KWIECIEĹ";
             case 5 -> "MAJ";
             case 6 -> "CZERWIEC";
             case 7 -> "LIPIEC";
-            case 8 -> "SIERPIEŃ";
-            case 9 -> "WRZESIEŃ";
-            case 10 -> "PAŹDZIERNIK";
+            case 8 -> "SIERPIEĹ";
+            case 9 -> "WRZESIEĹ";
+            case 10 -> "PAĹąDZIERNIK";
             case 11 -> "LISTOPAD";
-            case 12 -> "GRUDZIEŃ";
+            case 12 -> "GRUDZIEĹ";
             default -> date.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl", "PL")).toUpperCase();
         };
     }
 
     private List<String> monthNames() {
         return List.of(
-            "STYCZEŃ",
+            "STYCZEĹ",
             "LUTY",
             "MARZEC",
-            "KWIECIEŃ",
+            "KWIECIEĹ",
             "MAJ",
             "CZERWIEC",
             "LIPIEC",
-            "SIERPIEŃ",
-            "WRZESIEŃ",
-            "PAŹDZIERNIK",
+            "SIERPIEĹ",
+            "WRZESIEĹ",
+            "PAĹąDZIERNIK",
             "LISTOPAD",
-            "GRUDZIEŃ"
+            "GRUDZIEĹ"
         );
     }
 
@@ -571,5 +623,15 @@ public class PointsController {
         public int getTotal() {
             return total;
         }
+    }
+
+    private void setCellText(org.apache.poi.xwpf.usermodel.XWPFTableCell cell, String text, boolean header) {
+        cell.removeParagraph(0);
+        XWPFParagraph paragraph = cell.addParagraph();
+        XWPFRun run = paragraph.createRun();
+        run.setText(text);
+        run.setFontFamily("Dosis");
+        run.setFontSize(10);
+        run.setBold(header);
     }
 }

@@ -94,6 +94,7 @@
             <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
             <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/docx(date=${dateParam})}">Pobierz DOCM</a>
             <a class="ghost" th:if="${tab} == 'points'" th:href="@{/points/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
+            <a class="ghost" th:if="${tab} == 'points'" th:href="@{/points/docm(date=${dateParam})}">Pobierz DOCM</a>
         </form>
 
         <div th:if="${tab} == 'monthly'">
