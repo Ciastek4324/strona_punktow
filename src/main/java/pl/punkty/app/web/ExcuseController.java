@@ -10,8 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import pl.punkty.app.model.Excuse;
-import pl.punkty.app.model.ExcuseStatus;
-import pl.punkty.app.repo.ExcuseRepository;
+import pl.punkty.app.service.ExcuseService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,10 +18,10 @@ import java.util.List;
 
 @Controller
 public class ExcuseController {
-    private final ExcuseRepository excuseRepository;
+    private final ExcuseService excuseService;
 
-    public ExcuseController(ExcuseRepository excuseRepository) {
-        this.excuseRepository = excuseRepository;
+    public ExcuseController(ExcuseService excuseService) {
+        this.excuseService = excuseService;
     }
 
     @GetMapping("/excuses")
@@ -37,45 +36,22 @@ public class ExcuseController {
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
                                @RequestParam("reason") String reason,
                                Model model) {
-        String name = fullName.trim();
-        String why = reason.trim();
-        if (name.length() > 255) {
-            name = name.substring(0, 255);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String createdBy = (auth != null && auth.isAuthenticated()) ? auth.getName() : "guest";
+        ExcuseService.Result result = excuseService.submitExcuse(fullName, dateFrom, dateTo, reason, createdBy);
+        model.addAttribute("saved", result.isOk());
+        if (!result.isOk()) {
+            model.addAttribute("error", result.getError());
         }
-        if (why.length() > 1000) {
-            why = why.substring(0, 1000);
-        }
-        if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
-            model.addAttribute("saved", false);
-            model.addAttribute("error", "Niepoprawny zakres dat.");
-            return "excuses";
-        }
-        if (!name.isEmpty() && !why.isEmpty()) {
-            Excuse excuse = new Excuse();
-            excuse.setFullName(name);
-            excuse.setDateFrom(dateFrom);
-            excuse.setDateTo(dateTo);
-            excuse.setReason(why);
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String createdBy = (auth != null && auth.isAuthenticated()) ? auth.getName() : "guest";
-            excuse.setCreatedBy(createdBy);
-            excuseRepository.save(excuse);
-        }
-        model.addAttribute("saved", true);
         return "excuses";
     }
 
     @GetMapping("/excuses/inbox")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String excusesInbox(Model model) {
-        List<Excuse> items = excuseRepository.findAllByOrderByCreatedAtDesc();
-        long unread = excuseRepository.countByStatus(ExcuseStatus.PENDING);
-        if (!items.isEmpty()) {
-            for (Excuse excuse : items) {
-                excuse.setReadFlag(true);
-            }
-            excuseRepository.saveAll(items);
-        }
+        List<Excuse> items = excuseService.listAll();
+        long unread = excuseService.countPending();
+        excuseService.markAllRead(items);
         model.addAttribute("items", items);
         model.addAttribute("unread", unread);
         return "excuses-inbox";
@@ -86,12 +62,7 @@ public class ExcuseController {
     public String approveExcuse(@RequestParam("id") Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String reviewer = auth != null ? auth.getName() : "user";
-        excuseRepository.findById(id).ifPresent(excuse -> {
-            excuse.setStatus(ExcuseStatus.APPROVED);
-            excuse.setReviewedAt(LocalDateTime.now());
-            excuse.setReviewedBy(reviewer);
-            excuseRepository.save(excuse);
-        });
+        excuseService.approve(id, reviewer);
         return "redirect:/excuses/inbox";
     }
 
@@ -100,12 +71,7 @@ public class ExcuseController {
     public String rejectExcuse(@RequestParam("id") Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String reviewer = auth != null ? auth.getName() : "user";
-        excuseRepository.findById(id).ifPresent(excuse -> {
-            excuse.setStatus(ExcuseStatus.REJECTED);
-            excuse.setReviewedAt(LocalDateTime.now());
-            excuse.setReviewedBy(reviewer);
-            excuseRepository.save(excuse);
-        });
+        excuseService.reject(id, reviewer);
         return "redirect:/excuses/inbox";
     }
 }

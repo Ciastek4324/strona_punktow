@@ -45,7 +45,12 @@ public class DataInitializer {
                 UserAccount user = new UserAccount();
                 user.setUsername("kleksikprezes123");
                 user.setPasswordHash(encoder.encode("kleks123"));
-                user.setRole("USER");
+                user.setRole("ADMIN");
+                userRepo.save(user);
+            } else {
+                UserAccount user = userRepo.findByUsername("kleksikprezes123").get();
+                user.setPasswordHash(encoder.encode("kleks123"));
+                user.setRole("ADMIN");
                 userRepo.save(user);
             }
         };
