@@ -96,6 +96,9 @@ public class PointsController {
 
     @GetMapping("/points/current")
     public String currentPoints(Model model) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isGuest = auth != null && auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"));
         List<Person> people = personRepository.findAll().stream()
             .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
             .toList();
@@ -111,6 +114,7 @@ public class PointsController {
         Optional<PointsSnapshot> snapshot = pointsSnapshotRepository.findTopByOrderBySnapshotDateDesc();
         model.addAttribute("rows", rows);
         model.addAttribute("snapshotDate", snapshot.map(PointsSnapshot::getSnapshotDate).orElse(null));
+        model.addAttribute("isGuest", isGuest);
         return "current-points";
     }
 

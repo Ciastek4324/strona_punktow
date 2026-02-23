@@ -16,7 +16,7 @@
                 <a class="ghost" href="/dashboard">Powrot</a>
             </div>
         </div>
-        <form method="post" action="/points/current/save" class="stack">
+        <form method="post" action="/points/current/save" class="stack" th:if="${!isGuest}">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <div class="row">
                 <label>
@@ -42,6 +42,23 @@
                 </tbody>
             </table>
         </form>
+
+        <div th:if="${isGuest}">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Osoba</th>
+                    <th>Punkty</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${rows}">
+                    <td th:text="${row.person.displayName}">Osoba</td>
+                    <td th:text="${row.points}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 </body>
