@@ -8,24 +8,22 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
-import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.service.PeopleService;
 
 import java.util.List;
 
 @Controller
 @PreAuthorize("hasAnyRole('ADMIN','USER')")
 public class FunctionsController {
-    private final PersonRepository personRepository;
+    private final PeopleService peopleService;
 
-    public FunctionsController(PersonRepository personRepository) {
-        this.personRepository = personRepository;
+    public FunctionsController(PeopleService peopleService) {
+        this.peopleService = peopleService;
     }
 
     @GetMapping("/functions")
     public String functions(Model model) {
-        List<Person> people = personRepository.findAll().stream()
-            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
-            .toList();
+        List<Person> people = peopleService.getPeopleSorted();
         model.addAttribute("people", people);
         model.addAttribute("roles", PersonRole.values());
         return "functions";
@@ -34,10 +32,7 @@ public class FunctionsController {
     @PostMapping("/functions/update")
     public String updateFunction(@RequestParam("personId") Long personId,
                                  @RequestParam("role") PersonRole role) {
-        personRepository.findById(personId).ifPresent(person -> {
-            person.setRole(role);
-            personRepository.save(person);
-        });
+        peopleService.updateRole(personId, role);
         return "redirect:/functions";
     }
 }

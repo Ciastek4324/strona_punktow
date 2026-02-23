@@ -28,10 +28,10 @@ import pl.punkty.app.repo.CurrentPointsRepository;
 import pl.punkty.app.repo.ExcuseRepository;
 import pl.punkty.app.repo.MonthlyPointsSnapshotItemRepository;
 import pl.punkty.app.repo.MonthlyPointsSnapshotRepository;
-import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.PointsHistoryRepository;
 import pl.punkty.app.repo.PointsSnapshotRepository;
 import pl.punkty.app.service.PointsService;
+import pl.punkty.app.service.PeopleService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,29 +66,29 @@ public class PointsController {
 
     private final CurrentPointsRepository currentPointsRepository;
     private final PointsSnapshotRepository pointsSnapshotRepository;
-    private final PersonRepository personRepository;
     private final ExcuseRepository excuseRepository;
     private final PointsHistoryRepository pointsHistoryRepository;
     private final MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository;
     private final MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository;
     private final PointsService pointsService;
+    private final PeopleService peopleService;
 
     public PointsController(CurrentPointsRepository currentPointsRepository,
                             PointsSnapshotRepository pointsSnapshotRepository,
-                            PersonRepository personRepository,
                             ExcuseRepository excuseRepository,
                             PointsHistoryRepository pointsHistoryRepository,
                             MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository,
                             MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository,
-                            PointsService pointsService) {
+                            PointsService pointsService,
+                            PeopleService peopleService) {
         this.currentPointsRepository = currentPointsRepository;
         this.pointsSnapshotRepository = pointsSnapshotRepository;
-        this.personRepository = personRepository;
         this.excuseRepository = excuseRepository;
         this.pointsHistoryRepository = pointsHistoryRepository;
         this.monthlyPointsSnapshotRepository = monthlyPointsSnapshotRepository;
         this.monthlyPointsSnapshotItemRepository = monthlyPointsSnapshotItemRepository;
         this.pointsService = pointsService;
+        this.peopleService = peopleService;
     }
 
     @GetMapping("/dashboard")
@@ -116,7 +116,7 @@ public class PointsController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isGuest = auth != null && auth.getAuthorities().stream()
             .anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"));
-        List<Person> people = pointsService.getPeopleSorted();
+        List<Person> people = peopleService.getPeopleSorted();
         Map<Long, Integer> pointsByPerson = new LinkedHashMap<>();
         for (CurrentPoints cp : currentPointsRepository.findAll()) {
             pointsByPerson.put(cp.getPerson().getId(), cp.getPoints());
@@ -139,7 +139,7 @@ public class PointsController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String changedBy = auth != null ? auth.getName() : "user";
 
-        List<Person> people = pointsService.getPeopleSorted();
+        List<Person> people = peopleService.getPeopleSorted();
         Map<Long, CurrentPoints> existing = new LinkedHashMap<>();
         for (CurrentPoints cp : currentPointsRepository.findAll()) {
             existing.put(cp.getPerson().getId(), cp);
@@ -221,7 +221,7 @@ public class PointsController {
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
         model.addAttribute("weekdayAspiranci", weekdayAspiranci());
 
-        List<Person> people = pointsService.getPeopleSorted();
+        List<Person> people = peopleService.getPeopleSorted();
 
         Map<Long, Integer> monthPoints = pointsService.monthPoints(effectiveDate);
         List<PointsRow> pointsRows = new ArrayList<>();
@@ -249,7 +249,7 @@ public class PointsController {
         snapshot.setCreatedBy(createdBy);
         snapshot = monthlyPointsSnapshotRepository.save(snapshot);
 
-        List<Person> people = pointsService.getPeopleSorted();
+        List<Person> people = peopleService.getPeopleSorted();
         Map<Long, Integer> monthPoints = pointsService.monthPoints(date);
         List<MonthlyPointsSnapshotItem> items = new ArrayList<>();
         for (Person person : people) {
@@ -302,19 +302,7 @@ public class PointsController {
                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                             @RequestParam(required = false, defaultValue = "points") String tab) {
         String name = displayName.trim();
-        if (name.length() > 100) {
-            name = name.substring(0, 100);
-        }
-        if (basePoints < -9999 || basePoints > 9999) {
-            basePoints = 0;
-        }
-        if (!name.isEmpty() && personRepository.findByDisplayNameIgnoreCase(name).isEmpty()) {
-            Person person = new Person();
-            person.setDisplayName(name);
-            person.setRole(role);
-            person.setBasePoints(basePoints);
-            personRepository.save(person);
-        }
+        peopleService.addPerson(name, role, basePoints);
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
@@ -325,11 +313,7 @@ public class PointsController {
                                @RequestParam("basePoints") int basePoints,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                @RequestParam(required = false, defaultValue = "points") String tab) {
-        personRepository.findById(personId).ifPresent(person -> {
-            person.setRole(role);
-            person.setBasePoints(basePoints);
-            personRepository.save(person);
-        });
+        peopleService.updatePerson(personId, role, basePoints);
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
@@ -338,7 +322,7 @@ public class PointsController {
     public String deletePerson(@RequestParam("personId") Long personId,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                @RequestParam(required = false, defaultValue = "points") String tab) {
-        personRepository.deleteById(personId);
+        peopleService.deletePerson(personId);
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
@@ -364,7 +348,7 @@ public class PointsController {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         model.addAttribute("monthName", monthName(effectiveDate));
 
-        List<Person> people = pointsService.getPeopleSorted();
+        List<Person> people = peopleService.getPeopleSorted();
         Map<Long, Integer> monthPoints = pointsService.monthPoints(effectiveDate);
         List<PointsRow> pointsRows = new ArrayList<>();
         for (Person person : people) {
@@ -382,7 +366,7 @@ public class PointsController {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         String monthName = monthName(effectiveDate);
 
-        List<Person> people = pointsService.getPeopleSorted();
+        List<Person> people = peopleService.getPeopleSorted();
         Map<Long, Integer> monthPoints = pointsService.monthPoints(effectiveDate);
         List<PointsRow> pointsRows = new ArrayList<>();
         for (Person person : people) {

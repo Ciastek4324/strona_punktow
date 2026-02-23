@@ -1,37 +1,25 @@
 package pl.punkty.app.service;
 
 import org.springframework.stereotype.Service;
-import pl.punkty.app.model.Person;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
-import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
 public class PointsService {
-    private final PersonRepository personRepository;
     private final WeeklyTableRepository weeklyTableRepository;
     private final WeeklyAttendanceRepository weeklyAttendanceRepository;
 
-    public PointsService(PersonRepository personRepository,
-                         WeeklyTableRepository weeklyTableRepository,
+    public PointsService(WeeklyTableRepository weeklyTableRepository,
                          WeeklyAttendanceRepository weeklyAttendanceRepository) {
-        this.personRepository = personRepository;
         this.weeklyTableRepository = weeklyTableRepository;
         this.weeklyAttendanceRepository = weeklyAttendanceRepository;
-    }
-
-    public List<Person> getPeopleSorted() {
-        return personRepository.findAll().stream()
-            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
-            .toList();
     }
 
     public Map<Long, Integer> monthPoints(LocalDate date) {
