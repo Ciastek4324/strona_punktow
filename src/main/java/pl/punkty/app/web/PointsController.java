@@ -1,4 +1,4 @@
-﻿package pl.punkty.app.web;
+package pl.punkty.app.web;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.format.annotation.DateTimeFormat;
