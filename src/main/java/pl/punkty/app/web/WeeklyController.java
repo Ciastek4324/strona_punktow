@@ -1,4 +1,4 @@
-﻿package pl.punkty.app.web;
+package pl.punkty.app.web;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
