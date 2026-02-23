@@ -78,7 +78,7 @@ button, .ghost, .primary {
     cursor: pointer;
     text-decoration: none;
     border: 1px solid transparent;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.2s ease;
 }
 
 .primary {
@@ -96,6 +96,11 @@ button, .ghost, .primary {
 button:hover, .ghost:hover, .primary:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 16px rgba(31, 27, 22, 0.08);
+}
+
+button:active, .ghost:active, .primary:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
 }
 
 .stack {
@@ -128,11 +133,16 @@ button:hover, .ghost:hover, .primary:hover {
     text-decoration: none;
     color: var(--muted);
     font-weight: 600;
+    transition: transform 0.12s ease, background-color 0.2s ease;
 }
 
 .tab.active {
     background: var(--accent);
     color: #fff;
+}
+
+.tab:active {
+    transform: scale(0.98);
 }
 
 .grid {
@@ -155,6 +165,11 @@ button:hover, .ghost:hover, .primary:hover {
 .tile:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 22px rgba(31, 27, 22, 0.08);
+}
+
+.tile:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
 }
 
 .table {

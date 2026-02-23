@@ -39,6 +39,12 @@ public class ExcuseController {
                                Model model) {
         String name = fullName.trim();
         String why = reason.trim();
+        if (name.length() > 255) {
+            name = name.substring(0, 255);
+        }
+        if (why.length() > 1000) {
+            why = why.substring(0, 1000);
+        }
         if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
             model.addAttribute("saved", false);
             model.addAttribute("error", "Niepoprawny zakres dat.");

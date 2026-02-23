@@ -33,7 +33,7 @@
                 <h2>Generator list</h2>
                 <p>Generuj nowa liste na podstawie poprzedniej.</p>
             </a>
-            <a class="tile" href="/admin/export">
+            <a class="tile" href="/admin/export" th:if="${isAdmin}">
                 <h2>Backup</h2>
                 <p>Pobierz pelny backup danych.</p>
             </a>

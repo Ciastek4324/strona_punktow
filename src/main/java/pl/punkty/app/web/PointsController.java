@@ -24,8 +24,6 @@ import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.model.PointsHistory;
 import pl.punkty.app.model.PointsSnapshot;
-import pl.punkty.app.model.WeeklyAttendance;
-import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.CurrentPointsRepository;
 import pl.punkty.app.repo.ExcuseRepository;
 import pl.punkty.app.repo.MonthlyPointsSnapshotItemRepository;
@@ -102,6 +100,8 @@ public class PointsController {
         if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"))) {
             return "redirect:/points/current";
         }
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("unreadExcuses", excuseRepository.countByStatus(ExcuseStatus.PENDING));
         return "dashboard";
     }
@@ -155,6 +155,9 @@ public class PointsController {
             try {
                 value = Integer.parseInt(params.get(key));
             } catch (NumberFormatException ex) {
+                continue;
+            }
+            if (value < -9999 || value > 9999) {
                 continue;
             }
             CurrentPoints cp = existing.getOrDefault(person.getId(), new CurrentPoints());
@@ -299,6 +302,12 @@ public class PointsController {
                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                             @RequestParam(required = false, defaultValue = "points") String tab) {
         String name = displayName.trim();
+        if (name.length() > 100) {
+            name = name.substring(0, 100);
+        }
+        if (basePoints < -9999 || basePoints > 9999) {
+            basePoints = 0;
+        }
         if (!name.isEmpty() && personRepository.findByDisplayNameIgnoreCase(name).isEmpty()) {
             Person person = new Person();
             person.setDisplayName(name);
