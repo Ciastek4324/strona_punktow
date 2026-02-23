@@ -8,6 +8,7 @@ import pl.punkty.app.model.CurrentPoints;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.model.UserAccount;
 import pl.punkty.app.repo.CurrentPointsRepository;
+import pl.punkty.app.repo.ExcuseRepository;
 import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.UserAccountRepository;
 
@@ -32,8 +33,11 @@ public class DataInitializer {
     CommandLineRunner seedData(UserAccountRepository userRepo,
                                PersonRepository personRepo,
                                CurrentPointsRepository pointsRepo,
+                               ExcuseRepository excuseRepo,
                                PasswordEncoder encoder) {
         return args -> {
+            excuseRepo.backfillNullStatus();
+
             if (userRepo.findByUsername("PWierzycki").isEmpty()) {
                 UserAccount admin = new UserAccount();
                 admin.setUsername("PWierzycki");
@@ -65,17 +69,17 @@ public class DataInitializer {
 
             List<NamePoint> desired = List.of(
                 new NamePoint("Krzysztof Wierzycki", -8),
-                new NamePoint("RafaĹ‚ Opoka", -6),
+                new NamePoint("RafaÄąâ€š Opoka", -6),
                 new NamePoint("Wojciech Zelek", 49),
                 new NamePoint("Antoni Gorcowski", 50),
                 new NamePoint("Damian Sopata", 16),
                 new NamePoint("Filip Wierzycki", 31),
-                new NamePoint("Karol JeĹĽ", -7),
+                new NamePoint("Karol JeÄąÄ˝", -7),
                 new NamePoint("Krzysztof Florek", 23),
                 new NamePoint("Marcel Smoter", 9),
                 new NamePoint("Marcin Opoka", -3),
-                new NamePoint("Nikodem FrÄ…czyk", -7),
-                new NamePoint("PaweĹ‚ JeĹĽ", -4),
+                new NamePoint("Nikodem FrĂ„â€¦czyk", -7),
+                new NamePoint("PaweÄąâ€š JeÄąÄ˝", -4),
                 new NamePoint("Sebastian Wierzycki", 35),
                 new NamePoint("Szymon Zelek", 51),
                 new NamePoint("Tomek Gancarczyk", 23),
@@ -83,14 +87,14 @@ public class DataInitializer {
                 new NamePoint("Wojciech Bieniek", 14),
                 new NamePoint("Daniel Nowak", 42),
                 new NamePoint("Jakub Mucha", 47),
-                new NamePoint("RadosĹ‚aw Sopata", 25),
-                new NamePoint("StanisĹ‚aw Lubecki", 54),
+                new NamePoint("RadosÄąâ€šaw Sopata", 25),
+                new NamePoint("StanisÄąâ€šaw Lubecki", 54),
                 new NamePoint("Jan Migacz", -16),
                 new NamePoint("Kacper Florek", 15),
                 new NamePoint("Karol Klag", 1),
-                new NamePoint("MichaĹ‚ Furtak", 49),
-                new NamePoint("MichaĹ‚ Opoka", -5),
-                new NamePoint("PaweĹ‚ Wierzycki", 22),
+                new NamePoint("MichaÄąâ€š Furtak", 49),
+                new NamePoint("MichaÄąâ€š Opoka", -5),
+                new NamePoint("PaweÄąâ€š Wierzycki", 22),
                 new NamePoint("Sebastian Sopata", 9),
                 new NamePoint("Szymon Mucha", 12)
             );

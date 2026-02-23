@@ -22,7 +22,6 @@ public class Excuse {
     private String reason;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ExcuseStatus status = ExcuseStatus.PENDING;
 
     @Column(nullable = false)
