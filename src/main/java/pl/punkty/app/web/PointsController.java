@@ -251,6 +251,26 @@ public class PointsController {
         return "generator-print";
     }
 
+    @GetMapping("/points/print")
+    public String pointsPrint(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                              Model model) {
+        LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
+        model.addAttribute("monthName", monthName(effectiveDate));
+
+        List<Person> people = personRepository.findAll().stream()
+            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
+            .toList();
+        Map<Long, Integer> monthPoints = monthPoints(effectiveDate);
+        List<PointsRow> pointsRows = new ArrayList<>();
+        for (Person person : people) {
+            int base = person.getBasePoints();
+            int month = monthPoints.getOrDefault(person.getId(), 0);
+            pointsRows.add(new PointsRow(person, base, month, base + month));
+        }
+        model.addAttribute("pointsRows", pointsRows);
+        return "points-print";
+    }
+
     @GetMapping("/generator/docx")
     public void generatorDocx(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                               HttpServletResponse response) throws IOException {

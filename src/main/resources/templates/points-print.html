@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Punkty - wydruk</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dosis:wght@400;600;700&display=swap');
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        body {
+            font-family: "Dosis", sans-serif;
+            color: #000;
+            margin: 0;
+            background: #fff;
+        }
+        h1 {
+            font-size: 22px;
+            margin: 0 0 12px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border-bottom: 1px solid #bbb;
+            padding: 6px 4px;
+            text-align: left;
+        }
+        th:nth-child(2), th:nth-child(3), th:nth-child(4),
+        td:nth-child(2), td:nth-child(3), td:nth-child(4) {
+            text-align: right;
+            width: 90px;
+        }
+    </style>
+</head>
+<body>
+    <h1 th:text="'Punkty - ' + ${monthName}">Punkty</h1>
+    <table>
+        <thead>
+        <tr>
+            <th>Osoba</th>
+            <th>Punkty od poczatku</th>
+            <th th:text="'Punkty ' + ${monthName}">Punkty miesiac</th>
+            <th>Punkty razem</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${pointsRows}">
+            <td th:text="${row.person.displayName}">Osoba</td>
+            <td th:text="${row.basePoints}">0</td>
+            <td th:text="${row.monthPoints}">0</td>
+            <td th:text="${row.total}">0</td>
+        </tr>
+        </tbody>
+    </table>
+</body>
+</html>

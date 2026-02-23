@@ -32,9 +32,11 @@
             flex-wrap: wrap;
             margin: 12px 0 16px;
         }
-        .print-page {
+        .preview-frame {
+            width: 100%;
             border: 1px solid #ddd;
-            padding: 20px;
+            border-radius: 12px;
+            min-height: 900px;
             background: #fff;
         }
         .points-table {
@@ -89,48 +91,13 @@
                 <input type="date" name="date" th:value="${dateParam}" />
             </label>
             <button type="submit" class="primary">Zmien</button>
-            <a class="ghost" th:href="@{/generator/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
-            <a class="ghost" th:href="@{/generator/docx(date=${dateParam})}">Pobierz DOCM</a>
+            <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
+            <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/docx(date=${dateParam})}">Pobierz DOCM</a>
+            <a class="ghost" th:if="${tab} == 'points'" th:href="@{/points/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
         </form>
 
         <div th:if="${tab} == 'monthly'">
-            <div class="print-page">
-                <div class="print-header">
-                    <div class="print-date" th:text="${#temporals.format(date, 'dd.MM.yyyy')}">09.02.2026</div>
-                    <div>
-                        <div class="print-title">MSZE NIEDZIELNE</div>
-                        <div class="print-subtitle">SLUZENIA NIEDZIELNE</div>
-                    </div>
-                </div>
-                <div class="sunday-block">
-                    <div th:each="entry : ${sunday}">
-                        <div class="sunday-row">
-                            <div class="sunday-label" th:text="${entry.key}">PRYMARIA (aspiranci)</div>
-                            <div class="sunday-names" th:text="${#strings.listJoin(entry.value, ', ')}">Imiona</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="month-title" th:text="${monthName}">LUTY</div>
-                <div class="weekday-title">DNI POWSZEDNIE</div>
-                <div class="weekday-grid">
-                    <div>
-                        <div class="weekday-header">MINISTRANCI:</div>
-                        <div th:each="entry : ${weekdayMinistranci}">
-                            <div class="weekday-row"><span th:text="${entry.key}">Poniedzialek</span> - <span th:text="${#strings.listJoin(entry.value, ', ')}">Imiona</span></div>
-                        </div>
-
-                        <div class="weekday-header" style="margin-top: 16px;">LEKTORZY:</div>
-                        <div th:each="entry : ${weekdayLektorzy}">
-                            <div class="weekday-row"><span th:text="${entry.key}">Poniedzialek</span> - <span th:text="${#strings.listJoin(entry.value, ', ')}">Imiona</span></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="weekday-header">ASPIRANCI:</div>
-                        <div class="weekday-row" th:each="name : ${weekdayAspiranci}" th:text="${name}">Imie</div>
-                    </div>
-                </div>
-            </div>
+            <iframe class="preview-frame" th:src="@{/generator/print(date=${dateParam})}"></iframe>
         </div>
 
         <div th:if="${tab} == 'points'">
