@@ -32,6 +32,8 @@ public class ExcuseService {
         excuse.setDateTo(dateTo);
         excuse.setReason(why);
         excuse.setCreatedBy(createdBy == null ? "guest" : createdBy);
+        excuse.setStatus(ExcuseStatus.PENDING);
+        excuse.setReadFlag(false);
         excuseRepository.save(excuse);
         return Result.ok();
     }

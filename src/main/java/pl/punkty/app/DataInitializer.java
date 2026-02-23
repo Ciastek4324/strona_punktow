@@ -36,9 +36,10 @@ public class DataInitializer {
                 userRepo.save(admin2);
             } else {
                 UserAccount admin2 = userRepo.findByUsername("Admin").get();
-                admin2.setPasswordHash(encoder.encode("Haslo1"));
-                admin2.setRole("ADMIN");
-                userRepo.save(admin2);
+                if (!"ADMIN".equals(admin2.getRole())) {
+                    admin2.setRole("ADMIN");
+                    userRepo.save(admin2);
+                }
             }
 
             if (userRepo.findByUsername("kleksikprezes123").isEmpty()) {
@@ -49,9 +50,10 @@ public class DataInitializer {
                 userRepo.save(user);
             } else {
                 UserAccount user = userRepo.findByUsername("kleksikprezes123").get();
-                user.setPasswordHash(encoder.encode("kleks123"));
-                user.setRole("ADMIN");
-                userRepo.save(user);
+                if (!"ADMIN".equals(user.getRole())) {
+                    user.setRole("ADMIN");
+                    userRepo.save(user);
+                }
             }
         };
     }
