@@ -112,6 +112,29 @@ button:hover, .ghost:hover, .primary:hover {
     margin-bottom: 18px;
 }
 
+.tabs {
+    display: inline-flex;
+    gap: 8px;
+    margin: 6px 0 18px 0;
+    padding: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: #fff8f1;
+}
+
+.tab {
+    padding: 8px 14px;
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.tab.active {
+    background: var(--accent);
+    color: #fff;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

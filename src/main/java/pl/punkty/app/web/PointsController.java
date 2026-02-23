@@ -8,23 +8,30 @@ import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import pl.punkty.app.model.CurrentPoints;
+import pl.punkty.app.model.ExcuseStatus;
+import pl.punkty.app.model.MonthlyPointsSnapshot;
+import pl.punkty.app.model.MonthlyPointsSnapshotItem;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
+import pl.punkty.app.model.PointsHistory;
 import pl.punkty.app.model.PointsSnapshot;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.CurrentPointsRepository;
 import pl.punkty.app.repo.ExcuseRepository;
+import pl.punkty.app.repo.MonthlyPointsSnapshotItemRepository;
+import pl.punkty.app.repo.MonthlyPointsSnapshotRepository;
 import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.repo.PointsHistoryRepository;
 import pl.punkty.app.repo.PointsSnapshotRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
@@ -51,6 +58,7 @@ import java.util.zip.ZipOutputStream;
 
 @Controller
 public class PointsController {
+    private static final Locale LOCALE_PL = new Locale("pl", "PL");
     private static final List<String> WEEK_DAYS = List.of(
         "PoniedziaĹ‚ek",
         "Wtorek",
@@ -66,19 +74,28 @@ public class PointsController {
     private final WeeklyTableRepository weeklyTableRepository;
     private final WeeklyAttendanceRepository weeklyAttendanceRepository;
     private final ExcuseRepository excuseRepository;
+    private final PointsHistoryRepository pointsHistoryRepository;
+    private final MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository;
+    private final MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository;
 
     public PointsController(CurrentPointsRepository currentPointsRepository,
                             PersonRepository personRepository,
                             PointsSnapshotRepository pointsSnapshotRepository,
                             WeeklyTableRepository weeklyTableRepository,
                             WeeklyAttendanceRepository weeklyAttendanceRepository,
-                            ExcuseRepository excuseRepository) {
+                            ExcuseRepository excuseRepository,
+                            PointsHistoryRepository pointsHistoryRepository,
+                            MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository,
+                            MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository) {
         this.currentPointsRepository = currentPointsRepository;
         this.personRepository = personRepository;
         this.pointsSnapshotRepository = pointsSnapshotRepository;
         this.weeklyTableRepository = weeklyTableRepository;
         this.weeklyAttendanceRepository = weeklyAttendanceRepository;
         this.excuseRepository = excuseRepository;
+        this.pointsHistoryRepository = pointsHistoryRepository;
+        this.monthlyPointsSnapshotRepository = monthlyPointsSnapshotRepository;
+        this.monthlyPointsSnapshotItemRepository = monthlyPointsSnapshotItemRepository;
     }
 
     @GetMapping("/dashboard")
@@ -90,7 +107,7 @@ public class PointsController {
         if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"))) {
             return "redirect:/points/current";
         }
-        model.addAttribute("unreadExcuses", excuseRepository.countByReadFlagFalse());
+        model.addAttribute("unreadExcuses", excuseRepository.countByStatus(ExcuseStatus.PENDING));
         return "dashboard";
     }
 
@@ -122,17 +139,20 @@ public class PointsController {
         model.addAttribute("isGuest", isGuest);
         return "current-points";
     }
-
     @PostMapping("/points/current/save")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String saveCurrentPoints(@RequestParam Map<String, String> params,
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate snapshotDate) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String changedBy = auth != null ? auth.getName() : "user";
+
         List<Person> people = personRepository.findAll();
         Map<Long, CurrentPoints> existing = new LinkedHashMap<>();
         for (CurrentPoints cp : currentPointsRepository.findAll()) {
             existing.put(cp.getPerson().getId(), cp);
         }
         List<CurrentPoints> toSave = new ArrayList<>();
+        List<PointsHistory> history = new ArrayList<>();
         for (Person person : people) {
             String key = "p_" + person.getId();
             if (!params.containsKey(key)) {
@@ -145,12 +165,24 @@ public class PointsController {
                 continue;
             }
             CurrentPoints cp = existing.getOrDefault(person.getId(), new CurrentPoints());
+            int old = cp.getId() == null ? 0 : cp.getPoints();
+            if (old != value) {
+                PointsHistory ph = new PointsHistory();
+                ph.setPerson(person);
+                ph.setOldPoints(old);
+                ph.setNewPoints(value);
+                ph.setChangedBy(changedBy);
+                history.add(ph);
+            }
             cp.setPerson(person);
             cp.setPoints(value);
             toSave.add(cp);
         }
         if (!toSave.isEmpty()) {
             currentPointsRepository.saveAll(toSave);
+        }
+        if (!history.isEmpty()) {
+            pointsHistoryRepository.saveAll(history);
         }
 
         if (snapshotDate != null) {
@@ -161,6 +193,19 @@ public class PointsController {
         }
 
         return "redirect:/points/current";
+    }
+
+    @GetMapping("/points/history")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String pointsHistory(@RequestParam(required = false) String q, Model model) {
+        List<PointsHistory> all = pointsHistoryRepository.findAllByOrderByChangedAtDesc();
+        String query = q == null ? "" : q.trim().toLowerCase(LOCALE_PL);
+        List<PointsHistory> filtered = all.stream()
+            .filter(h -> query.isEmpty() || h.getPerson().getDisplayName().toLowerCase(LOCALE_PL).contains(query))
+            .toList();
+        model.addAttribute("items", filtered);
+        model.addAttribute("q", q == null ? "" : q);
+        return "points-history";
     }
 
     @GetMapping("/generator")
@@ -193,8 +238,67 @@ public class PointsController {
         }
         model.addAttribute("pointsRows", pointsRows);
         model.addAttribute("roles", PersonRole.values());
+        model.addAttribute("snapshots", monthlyPointsSnapshotRepository.findAllByOrderByCreatedAtDesc());
 
         return "generator";
+    }
+    @PostMapping("/points/snapshot/create")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String createPointsSnapshot(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String createdBy = auth != null ? auth.getName() : "user";
+
+        LocalDate monthDate = LocalDate.of(date.getYear(), date.getMonth(), 1);
+        MonthlyPointsSnapshot snapshot = new MonthlyPointsSnapshot();
+        snapshot.setMonthDate(monthDate);
+        snapshot.setCreatedBy(createdBy);
+        snapshot = monthlyPointsSnapshotRepository.save(snapshot);
+
+        List<Person> people = personRepository.findAll().stream()
+            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
+            .toList();
+        Map<Long, Integer> monthPoints = monthPoints(date);
+        List<MonthlyPointsSnapshotItem> items = new ArrayList<>();
+        for (Person person : people) {
+            int base = person.getBasePoints();
+            int month = monthPoints.getOrDefault(person.getId(), 0);
+            MonthlyPointsSnapshotItem item = new MonthlyPointsSnapshotItem();
+            item.setSnapshot(snapshot);
+            item.setPersonName(person.getDisplayName());
+            item.setBasePoints(base);
+            item.setMonthPoints(month);
+            item.setTotalPoints(base + month);
+            items.add(item);
+        }
+        monthlyPointsSnapshotItemRepository.saveAll(items);
+
+        return "redirect:/generator?tab=points&date=" + date;
+    }
+
+    @GetMapping("/points/snapshot")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String viewPointsSnapshot(@RequestParam("id") Long id, Model model) {
+        MonthlyPointsSnapshot snapshot = monthlyPointsSnapshotRepository.findById(id).orElse(null);
+        if (snapshot == null) {
+            return "redirect:/generator?tab=points";
+        }
+        List<MonthlyPointsSnapshotItem> items = monthlyPointsSnapshotItemRepository.findAllBySnapshotOrderByPersonNameAsc(snapshot);
+        model.addAttribute("monthName", monthName(snapshot.getMonthDate()));
+        model.addAttribute("items", items);
+        return "points-snapshot";
+    }
+
+    @GetMapping("/points/snapshot/print")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String printPointsSnapshot(@RequestParam("id") Long id, Model model) {
+        MonthlyPointsSnapshot snapshot = monthlyPointsSnapshotRepository.findById(id).orElse(null);
+        if (snapshot == null) {
+            return "redirect:/generator?tab=points";
+        }
+        List<MonthlyPointsSnapshotItem> items = monthlyPointsSnapshotItemRepository.findAllBySnapshotOrderByPersonNameAsc(snapshot);
+        model.addAttribute("monthName", monthName(snapshot.getMonthDate()));
+        model.addAttribute("items", items);
+        return "points-snapshot-print";
     }
 
     @PostMapping("/people/add")
@@ -255,7 +359,6 @@ public class PointsController {
 
         return "generator-print";
     }
-
     @GetMapping("/points/print")
     public String pointsPrint(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                               Model model) {
@@ -294,7 +397,8 @@ public class PointsController {
         }
 
         response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
-        response.setHeader("Content-Disposition", "attachment; filename=\"punkty-" + effectiveDate.getYear() + "-" + String.format("%02d", effectiveDate.getMonthValue()) + ".docm\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"punkty-" +
+            effectiveDate.getYear() + "-" + String.format("%02d", effectiveDate.getMonthValue()) + ".docm\"");
 
         try (XWPFDocument doc = new XWPFDocument(); OutputStream out = response.getOutputStream()) {
             XWPFParagraph title = doc.createParagraph();
@@ -366,7 +470,6 @@ public class PointsController {
         }
         return xml;
     }
-
     private String replaceWeekdaysInXml(String xml,
                                         Map<String, List<String>> base,
                                         Map<String, List<String>> target) {
@@ -493,7 +596,6 @@ public class PointsController {
     private List<String> weekdayAspiranci() {
         return List.of("Krzysztof Wierzycki", "RafaĹ‚ Opoka", "Wojciech Zelek");
     }
-
     private int monthOffsetFromBase(LocalDate date) {
         YearMonth base = YearMonth.of(2026, 2);
         YearMonth target = YearMonth.of(date.getYear(), date.getMonth());
@@ -532,7 +634,7 @@ public class PointsController {
             case 10 -> "PAĹąDZIERNIK";
             case 11 -> "LISTOPAD";
             case 12 -> "GRUDZIEĹ";
-            default -> date.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl", "PL")).toUpperCase();
+            default -> date.getMonth().getDisplayName(TextStyle.FULL, LOCALE_PL).toUpperCase(LOCALE_PL);
         };
     }
 

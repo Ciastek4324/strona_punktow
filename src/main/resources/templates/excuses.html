@@ -11,13 +11,16 @@
     <div class="card wide">
         <div class="row">
             <h1>Usprawiedliwienia</h1>
-            <a class="ghost" href="/points/current">Powrot</a>
+        </div>
+        <div class="tabs">
+            <a class="tab" href="/points/current">Aktualne punkty</a>
+            <a class="tab active" href="/excuses">Usprawiedliwienia</a>
         </div>
 
         <form method="post" action="/excuses/submit" class="stack">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <label>
-                Imie i nazwisko
+                Imię i nazwisko
                 <input type="text" name="fullName" required />
             </label>
             <div class="row">
@@ -31,13 +34,13 @@
                 </label>
             </div>
             <label>
-                Powod nieobecnosci
+                Powód nieobecności
                 <input type="text" name="reason" required />
             </label>
             <button type="submit" class="primary">Wyślij</button>
         </form>
 
-        <div class="hint" th:if="${saved}">Usprawiedliwienie wyslane.</div>
+        <div class="hint" th:if="${saved}">Usprawiedliwienie wysłane.</div>
     </div>
 </div>
 </body>
