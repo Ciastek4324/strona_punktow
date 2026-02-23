@@ -38,6 +38,7 @@ body {
     padding: 32px;
     box-shadow: 0 12px 28px rgba(31, 27, 22, 0.08);
     border: 1px solid var(--stroke);
+    animation: floatIn 0.4s ease-out;
 }
 
 .card.wide {
@@ -66,6 +67,13 @@ input {
     border-radius: 10px;
     border: 1px solid var(--stroke);
     font-size: 1rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(196, 90, 26, 0.15);
 }
 
 button, .ghost, .primary {
@@ -145,6 +153,15 @@ button:active, .ghost:active, .primary:active {
     transform: scale(0.98);
 }
 
+.tab:focus-visible,
+button:focus-visible,
+.ghost:focus-visible,
+.primary:focus-visible,
+.tile:focus-visible {
+    outline: 3px solid rgba(196, 90, 26, 0.35);
+    outline-offset: 2px;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -160,6 +177,7 @@ button:active, .ghost:active, .primary:active {
     text-decoration: none;
     color: var(--ink);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    animation: floatIn 0.45s ease-out;
 }
 
 .tile:hover {
@@ -181,6 +199,14 @@ button:active, .ghost:active, .primary:active {
     text-align: left;
     padding: 12px 10px;
     border-bottom: 1px solid var(--stroke);
+}
+
+.table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+    background: #fff7f0;
 }
 
 .hint {
@@ -210,6 +236,7 @@ button:active, .ghost:active, .primary:active {
     background: #ffffff;
     display: grid;
     gap: 8px;
+    animation: floatIn 0.4s ease-out;
 }
 
 .week-card.status-green {
@@ -240,6 +267,17 @@ button:active, .ghost:active, .primary:active {
     background: #d62828;
     border-radius: 50%;
     margin-left: 8px;
+}
+
+@keyframes floatIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media print {
