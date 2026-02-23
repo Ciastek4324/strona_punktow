@@ -11,7 +11,10 @@
     <div class="card wide">
         <div class="row">
             <h1>Aktualne punkty</h1>
-            <a class="ghost" href="/dashboard">Powrot</a>
+            <div class="row" style="gap:8px;">
+                <a class="ghost" href="/excuses">Usprawiedliwienia</a>
+                <a class="ghost" href="/dashboard">Powrot</a>
+            </div>
         </div>
         <form method="post" action="/points/current/save" class="stack">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />

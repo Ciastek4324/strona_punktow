@@ -8,6 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import pl.punkty.app.model.CurrentPoints;
@@ -78,7 +79,10 @@ public class PointsController {
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"))) {
+        if (auth == null || auth instanceof AnonymousAuthenticationToken) {
+            return "redirect:/login";
+        }
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"))) {
             return "redirect:/points/current";
         }
         model.addAttribute("unreadExcuses", excuseRepository.countByReadFlagFalse());
@@ -87,7 +91,7 @@ public class PointsController {
 
     @GetMapping("/")
     public String home() {
-        return "redirect:/dashboard";
+        return "redirect:/login";
     }
 
     @GetMapping("/points/current")
