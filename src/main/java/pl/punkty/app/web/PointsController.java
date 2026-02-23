@@ -245,12 +245,6 @@ public class PointsController {
         String monthName = monthName(effectiveDate);
         String dateStr = formatDate(effectiveDate);
 
-        Map<String, List<String>> baseMinistranci = weekdayMinistranci();
-        Map<String, List<String>> baseLektorzy = weekdayLektorzy();
-        int offset = monthOffsetFromBase(effectiveDate);
-        Map<String, List<String>> shiftedMinistranci = shiftWeekday(baseMinistranci, offset);
-        Map<String, List<String>> shiftedLektorzy = shiftWeekday(baseLektorzy, offset);
-
         response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
         response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docm\"");
 
@@ -270,8 +264,6 @@ public class PointsController {
                         String xml = new String(data, java.nio.charset.StandardCharsets.UTF_8);
                         xml = xml.replace("09.02.2026", dateStr);
                         xml = replaceMonthInXml(xml, monthName);
-                        xml = replaceWeekdaysInXml(xml, baseMinistranci, shiftedMinistranci);
-                        xml = replaceWeekdaysInXml(xml, baseLektorzy, shiftedLektorzy);
                         data = xml.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                     }
                     zout.write(data);
