@@ -1,12 +1,21 @@
-package pl.punkty.app.web;
+﻿package pl.punkty.app.web;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import pl.punkty.app.model.CurrentPoints;
+import pl.punkty.app.model.Person;
+import pl.punkty.app.model.PointsSnapshot;
 import pl.punkty.app.repo.CurrentPointsRepository;
+import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.repo.PointsSnapshotRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -38,13 +48,23 @@ public class PointsController {
     );
 
     private final CurrentPointsRepository currentPointsRepository;
+    private final PersonRepository personRepository;
+    private final PointsSnapshotRepository pointsSnapshotRepository;
 
-    public PointsController(CurrentPointsRepository currentPointsRepository) {
+    public PointsController(CurrentPointsRepository currentPointsRepository,
+                            PersonRepository personRepository,
+                            PointsSnapshotRepository pointsSnapshotRepository) {
         this.currentPointsRepository = currentPointsRepository;
+        this.personRepository = personRepository;
+        this.pointsSnapshotRepository = pointsSnapshotRepository;
     }
 
     @GetMapping("/dashboard")
     public String dashboard() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"))) {
+            return "redirect:/points/current";
+        }
         return "dashboard";
     }
 
@@ -55,8 +75,62 @@ public class PointsController {
 
     @GetMapping("/points/current")
     public String currentPoints(Model model) {
-        model.addAttribute("points", currentPointsRepository.findAll());
+        List<Person> people = personRepository.findAll().stream()
+            .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
+            .toList();
+        Map<Long, Integer> pointsByPerson = new LinkedHashMap<>();
+        for (CurrentPoints cp : currentPointsRepository.findAll()) {
+            pointsByPerson.put(cp.getPerson().getId(), cp.getPoints());
+        }
+        List<PersonRow> rows = new ArrayList<>();
+        for (Person person : people) {
+            int points = pointsByPerson.getOrDefault(person.getId(), 0);
+            rows.add(new PersonRow(person, points));
+        }
+        Optional<PointsSnapshot> snapshot = pointsSnapshotRepository.findTopByOrderBySnapshotDateDesc();
+        model.addAttribute("rows", rows);
+        model.addAttribute("snapshotDate", snapshot.map(PointsSnapshot::getSnapshotDate).orElse(null));
         return "current-points";
+    }
+
+    @PostMapping("/points/current/save")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String saveCurrentPoints(@RequestParam Map<String, String> params,
+                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate snapshotDate) {
+        List<Person> people = personRepository.findAll();
+        Map<Long, CurrentPoints> existing = new LinkedHashMap<>();
+        for (CurrentPoints cp : currentPointsRepository.findAll()) {
+            existing.put(cp.getPerson().getId(), cp);
+        }
+        List<CurrentPoints> toSave = new ArrayList<>();
+        for (Person person : people) {
+            String key = "p_" + person.getId();
+            if (!params.containsKey(key)) {
+                continue;
+            }
+            int value;
+            try {
+                value = Integer.parseInt(params.get(key));
+            } catch (NumberFormatException ex) {
+                continue;
+            }
+            CurrentPoints cp = existing.getOrDefault(person.getId(), new CurrentPoints());
+            cp.setPerson(person);
+            cp.setPoints(value);
+            toSave.add(cp);
+        }
+        if (!toSave.isEmpty()) {
+            currentPointsRepository.saveAll(toSave);
+        }
+
+        if (snapshotDate != null) {
+            pointsSnapshotRepository.deleteAll();
+            PointsSnapshot snapshot = new PointsSnapshot();
+            snapshot.setSnapshotDate(snapshotDate);
+            pointsSnapshotRepository.save(snapshot);
+        }
+
+        return "redirect:/points/current";
     }
 
     @GetMapping("/generator")
@@ -164,7 +238,7 @@ public class PointsController {
                 String startTag = extractStartTag(para);
                 String pPr = extractPPr(para);
                 String rPr = extractFirstRunPr(para);
-                String newText = day + " – " + String.join(", ", target.getOrDefault(day, List.of()));
+                String newText = day + " - " + String.join(", ", target.getOrDefault(day, List.of()));
                 StringBuilder rebuilt = new StringBuilder();
                 rebuilt.append(startTag);
                 if (pPr != null) {
@@ -334,5 +408,23 @@ public class PointsController {
 
     private String formatDate(LocalDate date) {
         return String.format("%02d.%02d.%04d", date.getDayOfMonth(), date.getMonthValue(), date.getYear());
+    }
+
+    public static class PersonRow {
+        private final Person person;
+        private final int points;
+
+        public PersonRow(Person person, int points) {
+            this.person = person;
+            this.points = points;
+        }
+
+        public Person getPerson() {
+            return person;
+        }
+
+        public int getPoints() {
+            return points;
+        }
     }
 }

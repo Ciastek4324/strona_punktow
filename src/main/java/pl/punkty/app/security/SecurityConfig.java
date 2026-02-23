@@ -13,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import pl.punkty.app.security.GuestAuthenticationProvider;
 
 import java.util.List;
@@ -45,11 +47,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, SecurityContextRepository securityContextRepository) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/login", "/guest", "/h2-console/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/calendar/**").hasAnyRole("ADMIN", "USER", "GUEST")
                 .requestMatchers("/points/current").hasAnyRole("ADMIN", "USER", "GUEST")
                 .anyRequest().hasAnyRole("ADMIN", "USER")
             )
@@ -62,6 +70,9 @@ public class SecurityConfig {
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
+            )
+            .securityContext(securityContext -> securityContext
+                .securityContextRepository(securityContextRepository)
             )
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/h2-console/**", "/guest", "/login")

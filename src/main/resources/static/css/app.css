@@ -158,6 +158,41 @@ button:hover, .ghost:hover, .primary:hover {
     border: 1px solid var(--stroke);
 }
 
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.week-card {
+    border-radius: 14px;
+    border: 1px solid var(--stroke);
+    padding: 14px;
+    background: #ffffff;
+    display: grid;
+    gap: 8px;
+}
+
+.week-card.status-green {
+    border-color: #7abf8a;
+    background: #f1fbf4;
+}
+
+.week-card.status-red {
+    border-color: #d99a9a;
+    background: #fff4f4;
+}
+
+.week-title {
+    font-weight: 700;
+}
+
+.week-state {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
 @media print {
     body {
         background: #fff;
