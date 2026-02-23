@@ -7,12 +7,22 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import pl.punkty.app.model.CurrentPoints;
+import pl.punkty.app.model.Excuse;
+import pl.punkty.app.model.MonthlyPointsSnapshot;
+import pl.punkty.app.model.MonthlyPointsSnapshotItem;
 import pl.punkty.app.model.Person;
+import pl.punkty.app.model.PointsHistory;
+import pl.punkty.app.model.PointsSnapshot;
 import pl.punkty.app.model.UserAccount;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.CurrentPointsRepository;
+import pl.punkty.app.repo.ExcuseRepository;
+import pl.punkty.app.repo.MonthlyPointsSnapshotItemRepository;
+import pl.punkty.app.repo.MonthlyPointsSnapshotRepository;
 import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.repo.PointsHistoryRepository;
+import pl.punkty.app.repo.PointsSnapshotRepository;
 import pl.punkty.app.repo.UserAccountRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
@@ -33,17 +43,32 @@ public class ExportController {
     private final WeeklyTableRepository weeklyTableRepository;
     private final WeeklyAttendanceRepository weeklyAttendanceRepository;
     private final UserAccountRepository userAccountRepository;
+    private final ExcuseRepository excuseRepository;
+    private final PointsHistoryRepository pointsHistoryRepository;
+    private final PointsSnapshotRepository pointsSnapshotRepository;
+    private final MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository;
+    private final MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository;
 
     public ExportController(PersonRepository personRepository,
                             CurrentPointsRepository currentPointsRepository,
                             WeeklyTableRepository weeklyTableRepository,
                             WeeklyAttendanceRepository weeklyAttendanceRepository,
-                            UserAccountRepository userAccountRepository) {
+                            UserAccountRepository userAccountRepository,
+                            ExcuseRepository excuseRepository,
+                            PointsHistoryRepository pointsHistoryRepository,
+                            PointsSnapshotRepository pointsSnapshotRepository,
+                            MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository,
+                            MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository) {
         this.personRepository = personRepository;
         this.currentPointsRepository = currentPointsRepository;
         this.weeklyTableRepository = weeklyTableRepository;
         this.weeklyAttendanceRepository = weeklyAttendanceRepository;
         this.userAccountRepository = userAccountRepository;
+        this.excuseRepository = excuseRepository;
+        this.pointsHistoryRepository = pointsHistoryRepository;
+        this.pointsSnapshotRepository = pointsSnapshotRepository;
+        this.monthlyPointsSnapshotRepository = monthlyPointsSnapshotRepository;
+        this.monthlyPointsSnapshotItemRepository = monthlyPointsSnapshotItemRepository;
     }
 
     @GetMapping("/admin/export")
@@ -55,6 +80,11 @@ public class ExportController {
             writeCurrentPoints(zos, currentPointsRepository.findAll());
             writeWeeklyTables(zos, weeklyTableRepository.findAll());
             writeWeeklyAttendance(zos, weeklyAttendanceRepository.findAll());
+            writePointsSnapshots(zos, pointsSnapshotRepository.findAll());
+            writePointsHistory(zos, pointsHistoryRepository.findAll());
+            writeMonthlySnapshots(zos, monthlyPointsSnapshotRepository.findAll());
+            writeMonthlySnapshotItems(zos, monthlyPointsSnapshotItemRepository.findAll());
+            writeExcuses(zos, excuseRepository.findAll());
             writeUsers(zos, userAccountRepository.findAll());
         }
 
@@ -120,6 +150,74 @@ public class ExportController {
               .append(csv(u.getRole())).append('\n');
         }
         writeEntry(zos, "users.csv", sb);
+    }
+
+    private void writePointsSnapshots(ZipOutputStream zos, List<PointsSnapshot> list) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,snapshot_date\n");
+        for (PointsSnapshot ps : list) {
+            sb.append(ps.getId()).append(',')
+              .append(ps.getSnapshotDate()).append('\n');
+        }
+        writeEntry(zos, "points_snapshots.csv", sb);
+    }
+
+    private void writePointsHistory(ZipOutputStream zos, List<PointsHistory> list) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,person_id,old_points,new_points,changed_by,changed_at\n");
+        for (PointsHistory ph : list) {
+            sb.append(ph.getId()).append(',')
+              .append(ph.getPerson().getId()).append(',')
+              .append(ph.getOldPoints()).append(',')
+              .append(ph.getNewPoints()).append(',')
+              .append(csv(ph.getChangedBy())).append(',')
+              .append(ph.getChangedAt()).append('\n');
+        }
+        writeEntry(zos, "points_history.csv", sb);
+    }
+
+    private void writeMonthlySnapshots(ZipOutputStream zos, List<MonthlyPointsSnapshot> list) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,month_date,created_by,created_at\n");
+        for (MonthlyPointsSnapshot ms : list) {
+            sb.append(ms.getId()).append(',')
+              .append(ms.getMonthDate()).append(',')
+              .append(csv(ms.getCreatedBy())).append(',')
+              .append(ms.getCreatedAt()).append('\n');
+        }
+        writeEntry(zos, "monthly_points_snapshots.csv", sb);
+    }
+
+    private void writeMonthlySnapshotItems(ZipOutputStream zos, List<MonthlyPointsSnapshotItem> list) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,snapshot_id,person_name,base_points,month_points,total_points\n");
+        for (MonthlyPointsSnapshotItem item : list) {
+            sb.append(item.getId()).append(',')
+              .append(item.getSnapshot().getId()).append(',')
+              .append(csv(item.getPersonName())).append(',')
+              .append(item.getBasePoints()).append(',')
+              .append(item.getMonthPoints()).append(',')
+              .append(item.getTotalPoints()).append('\n');
+        }
+        writeEntry(zos, "monthly_points_snapshot_items.csv", sb);
+    }
+
+    private void writeExcuses(ZipOutputStream zos, List<Excuse> list) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,full_name,date_from,date_to,reason,status,created_by,created_at,reviewed_by,reviewed_at\n");
+        for (Excuse ex : list) {
+            sb.append(ex.getId()).append(',')
+              .append(csv(ex.getFullName())).append(',')
+              .append(ex.getDateFrom()).append(',')
+              .append(ex.getDateTo()).append(',')
+              .append(csv(ex.getReason())).append(',')
+              .append(ex.getStatus()).append(',')
+              .append(csv(ex.getCreatedBy())).append(',')
+              .append(ex.getCreatedAt()).append(',')
+              .append(csv(ex.getReviewedBy())).append(',')
+              .append(ex.getReviewedAt()).append('\n');
+        }
+        writeEntry(zos, "excuses.csv", sb);
     }
 
     private void writeEntry(ZipOutputStream zos, String name, StringBuilder sb) throws IOException {
