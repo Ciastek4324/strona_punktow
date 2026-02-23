@@ -1,4 +1,4 @@
-﻿package pl.punkty.app;
+package pl.punkty.app;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;

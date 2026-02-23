@@ -1,4 +1,4 @@
-﻿package pl.punkty.app.model;
+package pl.punkty.app.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
