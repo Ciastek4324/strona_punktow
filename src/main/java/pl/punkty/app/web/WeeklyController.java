@@ -1,4 +1,4 @@
-package pl.punkty.app.web;
+﻿package pl.punkty.app.web;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -33,13 +33,16 @@ import java.util.stream.Collectors;
 
 @Controller
 public class WeeklyController {
-    private static final List<DayOfWeek> DAYS = List.of(
-        DayOfWeek.MONDAY,
-        DayOfWeek.TUESDAY,
-        DayOfWeek.WEDNESDAY,
-        DayOfWeek.THURSDAY,
-        DayOfWeek.FRIDAY,
-        DayOfWeek.SATURDAY
+    private static final List<WeekSlot> SLOTS = List.of(
+        new WeekSlot("Pon", 1),
+        new WeekSlot("Wt", 2),
+        new WeekSlot("Sr", 3),
+        new WeekSlot("Czw", 4),
+        new WeekSlot("Pt", 5),
+        new WeekSlot("Sb", 6),
+        new WeekSlot("R", 71),
+        new WeekSlot("S", 72),
+        new WeekSlot("P", 73)
     );
 
     private final WeeklyTableRepository tableRepository;
@@ -83,16 +86,16 @@ public class WeeklyController {
                 .toList();
         }
 
-        Map<Long, Set<DayOfWeek>> presence = new LinkedHashMap<>();
+        Map<Long, Set<Integer>> presence = new LinkedHashMap<>();
         List<WeeklyAttendance> existing = attendanceRepository.findByTableRef(table);
         for (WeeklyAttendance wa : existing) {
-            presence.computeIfAbsent(wa.getPerson().getId(), k -> new java.util.HashSet<>())
-                .add(dayFromInt(wa.getDayOfWeek()));
+            presence.computeIfAbsent(wa.getPerson().getId(), k -> new HashSet<>())
+                .add(wa.getDayOfWeek());
         }
 
         model.addAttribute("people", people);
         model.addAttribute("presence", presence);
-        model.addAttribute("days", DAYS);
+        model.addAttribute("slots", SLOTS);
         model.addAttribute("weekStart", weekStart);
         model.addAttribute("prevWeek", weekStart.minusWeeks(1));
         model.addAttribute("nextWeek", weekStart.plusWeeks(1));
@@ -113,7 +116,7 @@ public class WeeklyController {
 
         attendanceRepository.deleteByTableRef(table);
 
-        Map<Long, List<DayOfWeek>> selected = new LinkedHashMap<>();
+        Map<Long, List<Integer>> selected = new LinkedHashMap<>();
         for (String key : params.keySet()) {
             if (!key.startsWith("p_")) {
                 continue;
@@ -123,24 +126,24 @@ public class WeeklyController {
                 continue;
             }
             Long personId = Long.parseLong(parts[1]);
-            DayOfWeek day = DayOfWeek.of(Integer.parseInt(parts[2]));
-            selected.computeIfAbsent(personId, k -> new ArrayList<>()).add(day);
+            int slotCode = Integer.parseInt(parts[2]);
+            selected.computeIfAbsent(personId, k -> new ArrayList<>()).add(slotCode);
         }
 
         List<Person> people = personRepository.findAllById(selected.keySet());
         Map<Long, Person> personMap = people.stream().collect(Collectors.toMap(Person::getId, p -> p));
 
         List<WeeklyAttendance> toSave = new ArrayList<>();
-        for (Map.Entry<Long, List<DayOfWeek>> entry : selected.entrySet()) {
+        for (Map.Entry<Long, List<Integer>> entry : selected.entrySet()) {
             Person person = personMap.get(entry.getKey());
             if (person == null) {
                 continue;
             }
-            for (DayOfWeek day : entry.getValue()) {
+            for (Integer slotCode : entry.getValue()) {
                 WeeklyAttendance wa = new WeeklyAttendance();
                 wa.setTableRef(table);
                 wa.setPerson(person);
-                wa.setDayOfWeek(day.getValue());
+                wa.setDayOfWeek(slotCode);
                 wa.setPresent(true);
                 toSave.add(wa);
             }
@@ -200,12 +203,7 @@ public class WeeklyController {
         return fmt.format(weekStart) + " - " + fmt.format(end);
     }
 
-    private DayOfWeek dayFromInt(int value) {
-        if (value < 1 || value > 7) {
-            return DayOfWeek.MONDAY;
-        }
-        return DayOfWeek.of(value);
-    }
+    public record WeekSlot(String label, int code) { }
 
     public record WeekStatus(LocalDate weekStart, LocalDate weekEnd, boolean complete) { }
 }

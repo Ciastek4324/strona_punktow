@@ -68,21 +68,16 @@
                 <thead>
                 <tr>
                     <th class="sticky">Osoba</th>
-                    <th class="sticky">Pon</th>
-                    <th class="sticky">Wt</th>
-                    <th class="sticky">Sr</th>
-                    <th class="sticky">Czw</th>
-                    <th class="sticky">Pt</th>
-                    <th class="sticky">Sb</th>
+                    <th class="sticky" th:each="slot : ${slots}" th:text="${slot.label}">Pon</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="person : ${people}">
                     <td class="row-name" th:text="${person.displayName}">Osoba</td>
-                    <td th:each="day : ${days}">
+                    <td th:each="slot : ${slots}">
                         <input type="checkbox"
-                               th:name="'p_' + ${person.id} + '_'+ ${day.value}"
-                               th:checked="${presence[person.id] != null and presence[person.id].contains(day)}" />
+                               th:name="'p_' + ${person.id} + '_' + ${slot.code}"
+                               th:checked="${presence[person.id] != null and presence[person.id].contains(slot.code)}" />
                     </td>
                 </tr>
                 </tbody>
