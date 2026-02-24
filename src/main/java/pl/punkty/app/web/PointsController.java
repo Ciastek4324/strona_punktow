@@ -35,14 +35,13 @@ import pl.punkty.app.repo.PointsHistoryRepository;
 import pl.punkty.app.repo.PointsSnapshotRepository;
 import pl.punkty.app.service.PointsService;
 import pl.punkty.app.service.PeopleService;
+import pl.punkty.app.service.ScheduleService;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,15 +57,6 @@ import java.util.zip.ZipOutputStream;
 @Controller
 public class PointsController {
     private static final Locale LOCALE_PL = new Locale("pl", "PL");
-    private static final List<String> WEEK_DAYS = List.of(
-        "Poniedzialek",
-        "Wtorek",
-        "Sroda",
-        "Czwartek",
-        "Piatek",
-        "Sobota"
-    );
-
     private final CurrentPointsRepository currentPointsRepository;
     private final PointsSnapshotRepository pointsSnapshotRepository;
     private final ExcuseRepository excuseRepository;
@@ -75,6 +65,7 @@ public class PointsController {
     private final MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository;
     private final PointsService pointsService;
     private final PeopleService peopleService;
+    private final ScheduleService scheduleService;
 
     public PointsController(CurrentPointsRepository currentPointsRepository,
                             PointsSnapshotRepository pointsSnapshotRepository,
@@ -83,7 +74,8 @@ public class PointsController {
                             MonthlyPointsSnapshotRepository monthlyPointsSnapshotRepository,
                             MonthlyPointsSnapshotItemRepository monthlyPointsSnapshotItemRepository,
                             PointsService pointsService,
-                            PeopleService peopleService) {
+                            PeopleService peopleService,
+                            ScheduleService scheduleService) {
         this.currentPointsRepository = currentPointsRepository;
         this.pointsSnapshotRepository = pointsSnapshotRepository;
         this.excuseRepository = excuseRepository;
@@ -92,6 +84,7 @@ public class PointsController {
         this.monthlyPointsSnapshotItemRepository = monthlyPointsSnapshotItemRepository;
         this.pointsService = pointsService;
         this.peopleService = peopleService;
+        this.scheduleService = scheduleService;
     }
 
     @GetMapping("/dashboard")
@@ -222,12 +215,12 @@ public class PointsController {
         model.addAttribute("dateParam", effectiveDate.toString());
         model.addAttribute("tab", tab);
 
-        model.addAttribute("sunday", sundayData());
-        Map<String, List<String>> weekdayMinistranciShifted = shiftWeekday(weekdayMinistranci(), monthOffsetFromBase(effectiveDate));
-        Map<String, List<String>> weekdayLektorzyShifted = shiftWeekday(weekdayLektorzy(), monthOffsetFromBase(effectiveDate));
+        model.addAttribute("sunday", scheduleService.sundayData());
+        Map<String, List<String>> weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
+        Map<String, List<String>> weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
-        model.addAttribute("weekdayAspiranci", weekdayAspiranci());
+        model.addAttribute("weekdayAspiranci", scheduleService.weekdayAspiranci());
 
         List<Person> people = peopleService.getPeopleSorted();
 
@@ -343,12 +336,12 @@ public class PointsController {
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
 
-        model.addAttribute("sunday", sundayData());
-        Map<String, List<String>> weekdayMinistranciShifted = shiftWeekday(weekdayMinistranci(), monthOffsetFromBase(effectiveDate));
-        Map<String, List<String>> weekdayLektorzyShifted = shiftWeekday(weekdayLektorzy(), monthOffsetFromBase(effectiveDate));
+        model.addAttribute("sunday", scheduleService.sundayData());
+        Map<String, List<String>> weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
+        Map<String, List<String>> weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
-        model.addAttribute("weekdayAspiranci", weekdayAspiranci());
+        model.addAttribute("weekdayAspiranci", scheduleService.weekdayAspiranci());
 
         return "generator-print";
     }
@@ -544,70 +537,6 @@ public class PointsController {
             .replace(">", "&gt;")
             .replace("\"", "&quot;")
             .replace("'", "&#39;");
-    }
-
-    private Map<String, List<String>> sundayData() {
-        Map<String, List<String>> sunday = new LinkedHashMap<>();
-        sunday.put("PRYMARIA (aspiranci)", List.of("Rafal Opoka"));
-        sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
-        sunday.put("PRYMARIA (lektorzy)", List.of("Stanislaw Lubecki", "Kacper Florek", "Michal Furtak"));
-        sunday.put("SUMA (aspiranci)", List.of("Wojciech Zelek"));
-        sunday.put("SUMA (ministranci)", List.of("Szymon Zelek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
-        sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
-        sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
-        sunday.put("III MSZA (ministranci)", List.of("Nikodem Franczyk", "Damian Sopata", "Karol Jez", "Pawel Jez"));
-        sunday.put("III MSZA (lektorzy)", List.of("Pawel Wierzycki", "Sebastian Sopata", "Radoslaw Sopata", "Karol Klag"));
-        return sunday;
-    }
-
-    private Map<String, List<String>> weekdayMinistranci() {
-        Map<String, List<String>> weekdayMinistranci = new LinkedHashMap<>();
-        weekdayMinistranci.put("Poniedzialek", List.of("Nikodem Franczyk", "Krzysztof Florek"));
-        weekdayMinistranci.put("Wtorek", List.of("Tomasz Gancarczyk", "Marcin Opoka"));
-        weekdayMinistranci.put("Sroda", List.of("Damian Sopata", "Karol Jez", "Pawel Jez"));
-        weekdayMinistranci.put("Czwartek", List.of("Szymon Zelek", "Antoni Gorcowski"));
-        weekdayMinistranci.put("Piatek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
-        weekdayMinistranci.put("Sobota", List.of("Filip Wierzycki", "Wiktor Wierzycki", "Marcel Smoter"));
-        return weekdayMinistranci;
-    }
-
-    private Map<String, List<String>> weekdayLektorzy() {
-        Map<String, List<String>> weekdayLektorzy = new LinkedHashMap<>();
-        weekdayLektorzy.put("Poniedzialek", List.of("Kacper Florek", "Karol Klag"));
-        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "Radoslaw Sopata"));
-        weekdayLektorzy.put("Sroda", List.of("Pawel Wierzycki", "Daniel Nowak"));
-        weekdayLektorzy.put("Czwartek", List.of("Michal Furtak"));
-        weekdayLektorzy.put("Piatek", List.of("Stanislaw Lubecki", "Jan Migacz"));
-        weekdayLektorzy.put("Sobota", List.of("Szymon Mucha", "Jakub Mucha"));
-        return weekdayLektorzy;
-    }
-
-    private List<String> weekdayAspiranci() {
-        return List.of("Krzysztof Wierzycki", "Rafal Opoka", "Wojciech Zelek");
-    }
-
-    private int monthOffsetFromBase(LocalDate date) {
-        YearMonth base = YearMonth.of(2026, 2);
-        YearMonth target = YearMonth.of(date.getYear(), date.getMonth());
-        long monthsBetween = ChronoUnit.MONTHS.between(base, target);
-        int offset = (int) (monthsBetween % 6);
-        if (offset < 0) {
-            offset += 6;
-        }
-        return offset;
-    }
-
-    private Map<String, List<String>> shiftWeekday(Map<String, List<String>> original, int offset) {
-        Map<String, List<String>> shifted = new LinkedHashMap<>();
-        for (String day : WEEK_DAYS) {
-            shifted.put(day, List.of());
-        }
-        for (int i = 0; i < WEEK_DAYS.size(); i++) {
-            String fromDay = WEEK_DAYS.get(i);
-            String toDay = WEEK_DAYS.get((i + offset) % WEEK_DAYS.size());
-            shifted.put(toDay, original.getOrDefault(fromDay, List.of()));
-        }
-        return shifted;
     }
 
     private String monthName(LocalDate date) {

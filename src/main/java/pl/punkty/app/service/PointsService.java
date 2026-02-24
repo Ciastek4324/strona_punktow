@@ -1,6 +1,7 @@
 package pl.punkty.app.service;
 
 import org.springframework.stereotype.Service;
+import pl.punkty.app.model.Person;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
@@ -8,19 +9,28 @@ import pl.punkty.app.repo.WeeklyTableRepository;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class PointsService {
     private final WeeklyTableRepository weeklyTableRepository;
     private final WeeklyAttendanceRepository weeklyAttendanceRepository;
+    private final PeopleService peopleService;
+    private final ScheduleService scheduleService;
 
     public PointsService(WeeklyTableRepository weeklyTableRepository,
-                         WeeklyAttendanceRepository weeklyAttendanceRepository) {
+                         WeeklyAttendanceRepository weeklyAttendanceRepository,
+                         PeopleService peopleService,
+                         ScheduleService scheduleService) {
         this.weeklyTableRepository = weeklyTableRepository;
         this.weeklyAttendanceRepository = weeklyAttendanceRepository;
+        this.peopleService = peopleService;
+        this.scheduleService = scheduleService;
     }
 
     public Map<Long, Integer> monthPoints(LocalDate date) {
@@ -32,13 +42,75 @@ public class PointsService {
         if (tables.isEmpty()) {
             return points;
         }
+        Map<String, Long> nameToId = new HashMap<>();
+        Map<Long, String> idToName = new HashMap<>();
+        for (Person person : peopleService.getPeopleSorted()) {
+            nameToId.put(person.getDisplayName(), person.getId());
+            idToName.put(person.getId(), person.getDisplayName());
+        }
+
+        Map<Long, List<WeeklyAttendance>> byTable = new HashMap<>();
         for (WeeklyAttendance attendance : weeklyAttendanceRepository.findByTableRefIn(tables)) {
-            LocalDate weekStart = attendance.getTableRef().getWeekStart();
+            byTable.computeIfAbsent(attendance.getTableRef().getId(), k -> new java.util.ArrayList<>())
+                .add(attendance);
+        }
+
+        for (WeeklyTable table : tables) {
+            LocalDate weekStart = table.getWeekStart();
             if (weekStart == null || weekStart.isBefore(start.minusDays(7)) || weekStart.isAfter(end)) {
                 continue;
             }
-            Long personId = attendance.getPerson().getId();
-            points.put(personId, points.getOrDefault(personId, 0) + 1);
+            Map<Integer, Set<String>> scheduled = scheduleService.scheduledByDay(weekStart);
+
+            Map<Long, Set<Integer>> presentByPerson = new HashMap<>();
+            Map<Long, Integer> otherCounts = new HashMap<>();
+            List<WeeklyAttendance> attendances = byTable.getOrDefault(table.getId(), List.of());
+            for (WeeklyAttendance attendance : attendances) {
+                Long pid = attendance.getPerson().getId();
+                int day = attendance.getDayOfWeek();
+                if (day == 0) {
+                    otherCounts.put(pid, attendance.getOtherCount());
+                } else {
+                    presentByPerson.computeIfAbsent(pid, k -> new HashSet<>()).add(day);
+                }
+            }
+
+            for (Map.Entry<Integer, Set<String>> entry : scheduled.entrySet()) {
+                int day = entry.getKey();
+                for (String name : entry.getValue()) {
+                    Long pid = nameToId.get(name);
+                    if (pid == null) {
+                        continue;
+                    }
+                    boolean present = presentByPerson.getOrDefault(pid, Set.of()).contains(day);
+                    points.put(pid, points.getOrDefault(pid, 0) + (present ? 1 : -5));
+                }
+            }
+
+            for (Map.Entry<Long, Set<Integer>> entry : presentByPerson.entrySet()) {
+                Long pid = entry.getKey();
+                String name = idToName.get(pid);
+                if (name == null) {
+                    continue;
+                }
+                for (Integer day : entry.getValue()) {
+                    if (day >= 1 && day <= 6) {
+                        boolean scheduledForDay = scheduled.getOrDefault(day, Set.of()).contains(name);
+                        if (!scheduledForDay) {
+                            points.put(pid, points.getOrDefault(pid, 0) + 3);
+                        }
+                    } else if (day == 71 || day == 72 || day == 73) {
+                        points.put(pid, points.getOrDefault(pid, 0) + 3);
+                    }
+                }
+            }
+
+            for (Map.Entry<Long, Integer> entry : otherCounts.entrySet()) {
+                int count = entry.getValue() == null ? 0 : entry.getValue();
+                if (count > 0) {
+                    points.put(entry.getKey(), points.getOrDefault(entry.getKey(), 0) + (count * 3));
+                }
+            }
         }
         return points;
     }
