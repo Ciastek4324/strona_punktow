@@ -83,11 +83,34 @@ public class PeopleService {
         if (value == null) {
             return "";
         }
-        String name = toAscii(value.trim());
+        String name = toAscii(fixMojibake(value.trim()));
         if (name.length() > 100) {
             name = name.substring(0, 100);
         }
         return name;
+    }
+
+    private String fixMojibake(String input) {
+        String out = input
+            .replace("\u00c4\u2026", "a")  // Ä…
+            .replace("\u00c4\u2021", "c")  // Ä‡ 
+            .replace("\u00c4\u2122", "e")  // Ä™
+            .replace("\u00c5\u201a", "l")  // Å‚
+            .replace("\u00c5\u201e", "n")  // Å„
+            .replace("\u00c3\u00b3", "o")  // Ã³
+            .replace("\u00c5\u203a", "s")  // Å›
+            .replace("\u00c5\u00bc", "z")  // Å¼
+            .replace("\u00c5\u00ba", "z")  // Åº
+            .replace("\u00c4\u201e", "A")  // Ä„
+            .replace("\u00c4\u2020", "C")  // Ä†
+            .replace("\u00c4\u02dc", "E")  // Ä˜
+            .replace("\u00c5\u0081", "L")  // Å
+            .replace("\u00c5\u0083", "N")  // Åƒ
+            .replace("\u00c3\u201c", "O")  // Ã“
+            .replace("\u00c5\u009a", "S")  // Åš
+            .replace("\u00c5\u00bb", "Z")  // Å»
+            .replace("\u00c5\u00b9", "Z"); // Å¹
+        return out.replace("\u00c4\u0061\u00e2\u20ac\u0161", "l"); // Äaâ€š
     }
 
     private String toAscii(String input) {
