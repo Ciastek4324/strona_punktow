@@ -36,15 +36,19 @@
                 <thead>
                 <tr>
                     <th>Osoba</th>
-                    <th>Punkty</th>
+                    <th>Punkty sprzed miesiaca</th>
+                    <th>Punkty z miesiaca</th>
+                    <th>Punkty razem</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="row : ${rows}">
                     <td th:text="${row.person.displayName}">Osoba</td>
                     <td>
-                        <input type="number" step="1" th:name="${'p_' + row.person.id}" th:value="${row.points}" />
+                        <input type="number" step="1" th:name="${'p_' + row.person.id}" th:value="${row.basePoints}" />
                     </td>
+                    <td th:text="${row.monthPoints}">0</td>
+                    <td th:text="${row.total}">0</td>
                 </tr>
                 </tbody>
             </table>
@@ -55,13 +59,17 @@
                 <thead>
                 <tr>
                     <th>Osoba</th>
-                    <th>Punkty</th>
+                    <th>Punkty sprzed miesiaca</th>
+                    <th>Punkty z miesiaca</th>
+                    <th>Punkty razem</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="row : ${rows}">
                     <td th:text="${row.person.displayName}">Osoba</td>
-                    <td th:text="${row.points}">0</td>
+                    <td th:text="${row.basePoints}">0</td>
+                    <td th:text="${row.monthPoints}">0</td>
+                    <td th:text="${row.total}">0</td>
                 </tr>
                 </tbody>
             </table>

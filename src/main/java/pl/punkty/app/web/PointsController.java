@@ -121,14 +121,13 @@ public class PointsController {
         boolean isGuest = auth != null && auth.getAuthorities().stream()
             .anyMatch(a -> a.getAuthority().equals("ROLE_GUEST"));
         List<Person> people = peopleService.getPeopleSorted();
-        Map<Long, Integer> pointsByPerson = new LinkedHashMap<>();
-        for (CurrentPoints cp : currentPointsRepository.findAll()) {
-            pointsByPerson.put(cp.getPerson().getId(), cp.getPoints());
-        }
+        LocalDate now = LocalDate.now();
+        Map<Long, Integer> monthPoints = pointsService.monthPoints(now);
         List<PersonRow> rows = new ArrayList<>();
         for (Person person : people) {
-            int points = pointsByPerson.getOrDefault(person.getId(), 0);
-            rows.add(new PersonRow(person, points));
+            int base = person.getBasePoints();
+            int month = monthPoints.getOrDefault(person.getId(), 0);
+            rows.add(new PersonRow(person, base, month, base + month));
         }
         Optional<PointsSnapshot> snapshot = pointsSnapshotRepository.findTopByOrderBySnapshotDateDesc();
         model.addAttribute("rows", rows);
@@ -148,6 +147,8 @@ public class PointsController {
         for (CurrentPoints cp : currentPointsRepository.findAll()) {
             existing.put(cp.getPerson().getId(), cp);
         }
+        LocalDate now = LocalDate.now();
+        Map<Long, Integer> monthPoints = pointsService.monthPoints(now);
         List<CurrentPoints> toSave = new ArrayList<>();
         List<PointsHistory> history = new ArrayList<>();
         for (Person person : people) {
@@ -164,18 +165,23 @@ public class PointsController {
             if (value < -9999 || value > 9999) {
                 continue;
             }
-            CurrentPoints cp = existing.getOrDefault(person.getId(), new CurrentPoints());
-            int old = cp.getId() == null ? 0 : cp.getPoints();
-            if (old != value) {
+            int oldBase = person.getBasePoints();
+            if (oldBase != value) {
                 PointsHistory ph = new PointsHistory();
                 ph.setPerson(person);
-                ph.setOldPoints(old);
+                ph.setOldPoints(oldBase);
                 ph.setNewPoints(value);
                 ph.setChangedBy(changedBy);
                 history.add(ph);
             }
+            person.setBasePoints(value);
+            peopleService.updatePerson(person.getId(), person.getRole(), value);
+
+            int month = monthPoints.getOrDefault(person.getId(), 0);
+            int total = value + month;
+            CurrentPoints cp = existing.getOrDefault(person.getId(), new CurrentPoints());
             cp.setPerson(person);
-            cp.setPoints(value);
+            cp.setPoints(total);
             toSave.add(cp);
         }
         if (!toSave.isEmpty()) {
@@ -590,19 +596,31 @@ public class PointsController {
 
     public static class PersonRow {
         private final Person person;
-        private final int points;
+        private final int basePoints;
+        private final int monthPoints;
+        private final int total;
 
-        public PersonRow(Person person, int points) {
+        public PersonRow(Person person, int basePoints, int monthPoints, int total) {
             this.person = person;
-            this.points = points;
+            this.basePoints = basePoints;
+            this.monthPoints = monthPoints;
+            this.total = total;
         }
 
         public Person getPerson() {
             return person;
         }
 
-        public int getPoints() {
-            return points;
+        public int getBasePoints() {
+            return basePoints;
+        }
+
+        public int getMonthPoints() {
+            return monthPoints;
+        }
+
+        public int getTotal() {
+            return total;
         }
     }
 
