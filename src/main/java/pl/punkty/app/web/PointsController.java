@@ -57,6 +57,14 @@ import java.util.zip.ZipOutputStream;
 @Controller
 public class PointsController {
     private static final Locale LOCALE_PL = new Locale("pl", "PL");
+    private static final List<String> WEEK_DAYS = List.of(
+        "Poniedzialek",
+        "Wtorek",
+        "Sroda",
+        "Czwartek",
+        "Piatek",
+        "Sobota"
+    );
     private final CurrentPointsRepository currentPointsRepository;
     private final PointsSnapshotRepository pointsSnapshotRepository;
     private final ExcuseRepository excuseRepository;
