@@ -109,8 +109,15 @@ public class PeopleService {
             .replace("\u00c3\u201c", "O")  // Ã“
             .replace("\u00c5\u009a", "S")  // Åš
             .replace("\u00c5\u00bb", "Z")  // Å»
-            .replace("\u00c5\u00b9", "Z"); // Å¹
-        return out.replace("\u00c4\u0061\u00e2\u20ac\u0161", "l"); // Äaâ€š
+            .replace("\u00c5\u00b9", "Z")  // Å¹
+            .replace("\u00c4\u0061\u00e2\u20ac\u0161", "l") // Äaâ€š
+            .replace("\u00c4\u0061\u00c4\u02dd", "z") // ÄaÄ˝
+            .replace("\u00c4\u2026\u00c4\u02dd", "z") // Ä…Ä˝
+            .replace("\u00c4\u0061\u00c4\u02da", "z") // ÄaÄŠ
+            .replace("\u00c4\u0192\u00e2\u20ac\u00a6", "a") // Ă„â€¦
+            .replace("\u00c4\u201a\u00e2\u20ac\u00a6", "a") // Ä‚â€¦
+            .replace("\u00c5\u00b8", "z"); // Å¸
+        return out;
     }
 
     private String toAscii(String input) {
