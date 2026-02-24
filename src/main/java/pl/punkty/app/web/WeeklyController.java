@@ -107,6 +107,7 @@ public class WeeklyController {
         model.addAttribute("prevWeek", weekStart.minusWeeks(1));
         model.addAttribute("nextWeek", weekStart.plusWeeks(1));
         model.addAttribute("weekLabel", weekLabel(weekStart));
+        model.addAttribute("completed", table.isCompleted());
 
         return "weekly";
     }
@@ -207,11 +208,42 @@ public class WeeklyController {
             return "redirect:/weekly";
         }
         try {
-            tableRepository.findByWeekStart(weekStart).ifPresent(attendanceRepository::deleteByTableRef);
+            tableRepository.findByWeekStart(weekStart).ifPresent(table -> {
+                attendanceRepository.deleteByTableRef(table);
+                table.setCompleted(false);
+                tableRepository.save(table);
+            });
         } catch (Exception ex) {
             return "redirect:/weekly?week=" + weekStart + "&reset=error";
         }
         return "redirect:/weekly?week=" + weekStart + "&reset=ok";
+    }
+
+    @PostMapping("/weekly/complete")
+    @Transactional
+    public String weeklyComplete(@RequestParam("weekStart") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        WeeklyTable table = tableRepository.findByWeekStart(weekStart)
+            .orElseGet(() -> {
+                WeeklyTable created = new WeeklyTable();
+                created.setWeekStart(weekStart);
+                return tableRepository.save(created);
+            });
+        if (attendanceRepository.findByTableRef(table).isEmpty()) {
+            return "redirect:/weekly?week=" + weekStart + "&complete=empty";
+        }
+        table.setCompleted(true);
+        tableRepository.save(table);
+        return "redirect:/weekly?week=" + weekStart + "&complete=ok";
+    }
+
+    @PostMapping("/weekly/uncomplete")
+    @Transactional
+    public String weeklyUncomplete(@RequestParam("weekStart") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        tableRepository.findByWeekStart(weekStart).ifPresent(table -> {
+            table.setCompleted(false);
+            tableRepository.save(table);
+        });
+        return "redirect:/weekly?week=" + weekStart;
     }
 
     @GetMapping("/calendar")
@@ -228,12 +260,9 @@ public class WeeklyController {
         }
 
         Set<LocalDate> completedWeeks = new HashSet<>();
-        if (!tables.isEmpty()) {
-            for (WeeklyAttendance attendance : attendanceRepository.findByTableRefIn(tables)) {
-                LocalDate weekStart = tableIdToWeek.get(attendance.getTableRef().getId());
-                if (weekStart != null) {
-                    completedWeeks.add(weekStart);
-                }
+        for (WeeklyTable table : tables) {
+            if (table.isCompleted()) {
+                completedWeeks.add(table.getWeekStart());
             }
         }
 

@@ -93,6 +93,10 @@
                 <button type="submit" class="primary">Zapisz</button>
                 <button type="submit" class="ghost" formaction="/weekly/reset"
                         onclick="return confirm('Na pewno zresetowac ten tydzien?');">Reset tygodnia</button>
+                <button type="submit" class="primary" formaction="/weekly/complete"
+                        th:if="${!completed}">Zamknij tydzien</button>
+                <button type="submit" class="ghost" formaction="/weekly/uncomplete"
+                        th:if="${completed}">Otworz tydzien</button>
             </div>
         </form>
     </div>

@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface WeeklyTableRepository extends JpaRepository<WeeklyTable, Long> {
     Optional<WeeklyTable> findByWeekStart(LocalDate weekStart);
     List<WeeklyTable> findAllByWeekStartBetween(LocalDate start, LocalDate end);
+    List<WeeklyTable> findAllByWeekStartBetweenAndCompletedTrue(LocalDate start, LocalDate end);
 }

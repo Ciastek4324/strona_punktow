@@ -37,7 +37,7 @@ public class PointsService {
         YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
         LocalDate start = month.atDay(1);
         LocalDate end = month.atEndOfMonth();
-        List<WeeklyTable> tables = weeklyTableRepository.findAllByWeekStartBetween(start.minusDays(7), end);
+        List<WeeklyTable> tables = weeklyTableRepository.findAllByWeekStartBetweenAndCompletedTrue(start.minusDays(7), end);
         Map<Long, Integer> points = new LinkedHashMap<>();
         if (tables.isEmpty()) {
             return points;

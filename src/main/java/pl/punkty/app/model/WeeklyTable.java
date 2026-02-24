@@ -13,6 +13,9 @@ public class WeeklyTable {
     @Column(nullable = false)
     private LocalDate weekStart;
 
+    @Column(nullable = false)
+    private boolean completed = false;
+
     public Long getId() {
         return id;
     }
@@ -23,5 +26,13 @@ public class WeeklyTable {
 
     public void setWeekStart(LocalDate weekStart) {
         this.weekStart = weekStart;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 }
