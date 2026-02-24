@@ -303,12 +303,40 @@ public class ScheduleService {
         if (entryRepository.countBySchedule(schedule) > 0) {
             return schedule;
         }
-        Map<Integer, List<Long>> defaults = buildDefaultSlotIds(date);
+        Map<Integer, List<Long>> defaults = buildShiftedFromPrevious(date);
+        if (defaults.isEmpty()) {
+            defaults = buildDefaultSlotIds(date);
+        }
         if (defaults.isEmpty()) {
             return schedule;
         }
         saveSchedule(date, defaults);
         return schedule;
+    }
+
+    private Map<Integer, List<Long>> buildShiftedFromPrevious(LocalDate date) {
+        YearMonth current = YearMonth.of(date.getYear(), date.getMonth());
+        YearMonth previous = current.minusMonths(1);
+        LocalDate prevDate = LocalDate.of(previous.getYear(), previous.getMonth(), 1);
+        MonthlySchedule prevSchedule = scheduleRepository.findByMonthDate(prevDate).orElse(null);
+        if (prevSchedule == null || entryRepository.countBySchedule(prevSchedule) == 0) {
+            return Map.of();
+        }
+        List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(prevSchedule);
+        Map<Integer, List<Long>> shifted = new LinkedHashMap<>();
+        for (MonthlyScheduleEntry entry : entries) {
+            int slot = entry.getSlotCode();
+            int shiftedSlot = shiftWeekdaySlot(slot);
+            shifted.computeIfAbsent(shiftedSlot, k -> new ArrayList<>()).add(entry.getPerson().getId());
+        }
+        return shifted;
+    }
+
+    private int shiftWeekdaySlot(int slot) {
+        if (slot >= 1 && slot <= 6) {
+            return (slot % 6) + 1;
+        }
+        return slot;
     }
 
     private Map<Integer, List<Long>> buildDefaultSlotIds(LocalDate date) {

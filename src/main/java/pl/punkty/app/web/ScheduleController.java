@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.transaction.annotation.Transactional;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.service.PeopleService;
 import pl.punkty.app.service.ScheduleService;
@@ -76,6 +77,7 @@ public class ScheduleController {
 
     @PostMapping("/schedule/save")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @Transactional
     public String saveSchedule(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                @RequestParam Map<String, String> params) {
         Map<Integer, List<Long>> slotToPeople = new LinkedHashMap<>();
