@@ -24,6 +24,7 @@
                 <th>Powod</th>
                 <th>Dodane</th>
                 <th>Przez</th>
+                <th>Akcje</th>
             </tr>
             </thead>
             <tbody>
@@ -38,6 +39,13 @@
                 <td th:text="${item.reason}">Powod</td>
                 <td th:text="${#temporals.format(item.createdAt, 'dd.MM.yyyy HH:mm')}">01.01.2026</td>
                 <td th:text="${item.createdBy}">guest</td>
+                <td>
+                    <form method="post" action="/excuses/delete" onsubmit="return confirm('Usunac usprawiedliwienie?');">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <input type="hidden" name="id" th:value="${item.id}" />
+                        <button type="submit" class="ghost">Usun</button>
+                    </form>
+                </td>
             </tr>
             </tbody>
         </table>

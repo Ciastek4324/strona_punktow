@@ -79,4 +79,11 @@ public class ExcuseController {
         excuseService.reject(id, reviewer);
         return "redirect:/excuses/inbox";
     }
+
+    @PostMapping("/excuses/delete")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String deleteExcuse(@RequestParam("id") Long id) {
+        excuseService.delete(id);
+        return "redirect:/excuses/inbox";
+    }
 }

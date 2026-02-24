@@ -85,6 +85,10 @@ public class ExcuseService {
         });
     }
 
+    public void delete(Long id) {
+        excuseRepository.deleteById(id);
+    }
+
     private String sanitizeName(String value) {
         if (value == null) {
             return "";
