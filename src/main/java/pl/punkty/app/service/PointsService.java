@@ -60,17 +60,31 @@ public class PointsService {
             if (weekStart == null || weekStart.isBefore(start.minusDays(7)) || weekStart.isAfter(end)) {
                 continue;
             }
+            Map<Integer, Set<String>> scheduled = scheduleService.scheduledByDay(weekStart);
             Map<Integer, Set<String>> sundayScheduled = scheduleService.scheduledSundaySlots();
 
             Map<Long, Set<Integer>> presentByPerson = new HashMap<>();
             List<WeeklyAttendance> attendances = byTable.getOrDefault(table.getId(), List.of());
+            Map<Long, Integer> otherCounts = new HashMap<>();
             for (WeeklyAttendance attendance : attendances) {
                 Long pid = attendance.getPerson().getId();
                 int day = attendance.getDayOfWeek();
                 if (day == 0) {
-                    // ignore "Inne" for points
+                    otherCounts.put(pid, attendance.getOtherCount());
                 } else {
                     presentByPerson.computeIfAbsent(pid, k -> new HashSet<>()).add(day);
+                }
+            }
+
+            for (Map.Entry<Integer, Set<String>> entry : scheduled.entrySet()) {
+                int day = entry.getKey();
+                for (String name : entry.getValue()) {
+                    Long pid = nameToId.get(name);
+                    if (pid == null) {
+                        continue;
+                    }
+                    boolean present = presentByPerson.getOrDefault(pid, Set.of()).contains(day);
+                    points.put(pid, points.getOrDefault(pid, 0) + (present ? 1 : -5));
                 }
             }
 
@@ -93,7 +107,12 @@ public class PointsService {
                     continue;
                 }
                 for (Integer day : entry.getValue()) {
-                    if (day == 71 || day == 72 || day == 73) {
+                    if (day >= 1 && day <= 6) {
+                        boolean scheduledForDay = scheduled.getOrDefault(day, Set.of()).contains(name);
+                        if (!scheduledForDay) {
+                            points.put(pid, points.getOrDefault(pid, 0) + 3);
+                        }
+                    } else if (day == 71 || day == 72 || day == 73) {
                         boolean scheduledForSlot = sundayScheduled.getOrDefault(day, Set.of()).contains(name);
                         if (!scheduledForSlot) {
                             points.put(pid, points.getOrDefault(pid, 0) + 3);
@@ -102,7 +121,12 @@ public class PointsService {
                 }
             }
 
-            // weekdays and "Inne" do not change points
+            for (Map.Entry<Long, Integer> entry : otherCounts.entrySet()) {
+                int count = entry.getValue() == null ? 0 : entry.getValue();
+                if (count > 0) {
+                    points.put(entry.getKey(), points.getOrDefault(entry.getKey(), 0) + (count * 3));
+                }
+            }
         }
         return points;
     }
