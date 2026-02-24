@@ -217,12 +217,7 @@ public class ScheduleService {
     }
 
     public Map<Integer, List<String>> loadScheduleSlots(LocalDate date) {
-        YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
-        LocalDate monthDate = LocalDate.of(month.getYear(), month.getMonth(), 1);
-        MonthlySchedule schedule = scheduleRepository.findByMonthDate(monthDate).orElse(null);
-        if (schedule == null) {
-            return Map.of();
-        }
+        MonthlySchedule schedule = ensureScheduleInitialized(date);
         List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(schedule);
         Map<Integer, List<String>> slots = new HashMap<>();
         for (MonthlyScheduleEntry entry : entries) {
@@ -233,12 +228,7 @@ public class ScheduleService {
     }
 
     public Map<Integer, List<Long>> loadScheduleSlotIds(LocalDate date) {
-        YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
-        LocalDate monthDate = LocalDate.of(month.getYear(), month.getMonth(), 1);
-        MonthlySchedule schedule = scheduleRepository.findByMonthDate(monthDate).orElse(null);
-        if (schedule == null) {
-            return Map.of();
-        }
+        MonthlySchedule schedule = ensureScheduleInitialized(date);
         List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(schedule);
         Map<Integer, List<Long>> slots = new HashMap<>();
         for (MonthlyScheduleEntry entry : entries) {
@@ -289,6 +279,65 @@ public class ScheduleService {
         }
         if (!toSave.isEmpty()) {
             entryRepository.saveAll(toSave);
+        }
+    }
+
+    private MonthlySchedule ensureScheduleInitialized(LocalDate date) {
+        MonthlySchedule schedule = loadOrCreateSchedule(date);
+        if (entryRepository.countBySchedule(schedule) > 0) {
+            return schedule;
+        }
+        Map<Integer, List<Long>> defaults = buildDefaultSlotIds(date);
+        if (defaults.isEmpty()) {
+            return schedule;
+        }
+        saveSchedule(date, defaults);
+        return schedule;
+    }
+
+    private Map<Integer, List<Long>> buildDefaultSlotIds(LocalDate date) {
+        Map<String, Long> nameToId = new HashMap<>();
+        for (Person person : personRepository.findAll()) {
+            nameToId.put(person.getDisplayName(), person.getId());
+        }
+
+        int offset = monthOffsetFromBase(date);
+        Map<String, List<String>> ministranci = shiftWeekday(baseWeekdayMinistranci(), offset);
+        Map<String, List<String>> lektorzy = shiftWeekday(baseWeekdayLektorzy(), offset);
+        List<String> aspiranci = weekdayAspiranci();
+
+        Map<Integer, List<Long>> slots = new LinkedHashMap<>();
+        for (int i = 0; i < WEEK_DAYS.size(); i++) {
+            String day = WEEK_DAYS.get(i);
+            List<Long> ids = new ArrayList<>();
+            addNames(ids, ministranci.getOrDefault(day, List.of()), nameToId);
+            addNames(ids, lektorzy.getOrDefault(day, List.of()), nameToId);
+            addNames(ids, aspiranci, nameToId);
+            slots.put(i + 1, ids);
+        }
+
+        Map<String, List<String>> sunday = sundayData(date);
+        Map<Integer, List<Long>> sundaySlots = new LinkedHashMap<>();
+        sundaySlots.put(71, new ArrayList<>());
+        sundaySlots.put(72, new ArrayList<>());
+        sundaySlots.put(73, new ArrayList<>());
+        for (Map.Entry<String, List<String>> entry : sunday.entrySet()) {
+            int slot = sundaySlotFromKey(entry.getKey());
+            if (slot == 0) {
+                continue;
+            }
+            addNames(sundaySlots.get(slot), entry.getValue(), nameToId);
+        }
+        slots.putAll(sundaySlots);
+        return slots;
+    }
+
+    private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {
+        for (String name : names) {
+            Long id = nameToId.get(name);
+            if (id != null) {
+                ids.add(id);
+            }
         }
     }
 }
