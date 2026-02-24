@@ -86,19 +86,22 @@
 
         <form method="get" action="/generator" class="form-row">
             <input type="hidden" name="tab" th:value="${tab}" />
+            <input type="hidden" name="useSchedule" th:value="${useSchedule}" />
             <label>
                 Data listy
                 <input type="date" name="date" th:value="${dateParam}" />
             </label>
             <button type="submit" class="primary">Zmien</button>
-            <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
+            <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator(useSchedule=${!useSchedule},tab='monthly',date=${dateParam})}"
+               th:text="${useSchedule} ? 'Wylacz grafik' : 'Uzyj grafiku'">Uzyj grafiku</a>
+            <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/print(date=${dateParam},useSchedule=${useSchedule})}" target="_blank">Podglad wydruku</a>
             <a class="ghost" th:if="${tab} == 'monthly'" th:href="@{/generator/docx(date=${dateParam})}">Pobierz DOCM</a>
             <a class="ghost" th:if="${tab} == 'points'" th:href="@{/points/print(date=${dateParam})}" target="_blank">Podglad wydruku</a>
             <a class="ghost" th:if="${tab} == 'points'" th:href="@{/points/docm(date=${dateParam})}">Pobierz DOCM</a>
         </form>
 
         <div th:if="${tab} == 'monthly'">
-            <iframe class="preview-frame" th:src="@{/generator/print(date=${dateParam})}"></iframe>
+            <iframe class="preview-frame" th:src="@{/generator/print(date=${dateParam},useSchedule=${useSchedule})}"></iframe>
         </div>
 
         <div th:if="${tab} == 'points'">

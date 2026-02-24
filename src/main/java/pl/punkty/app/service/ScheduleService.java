@@ -64,6 +64,10 @@ public class ScheduleService {
         return baseSundayData();
     }
 
+    public Map<String, List<String>> sundayDataFromBase(LocalDate date) {
+        return baseSundayData();
+    }
+
     public Map<String, List<String>> weekdayMinistranci(LocalDate date) {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
@@ -76,6 +80,10 @@ public class ScheduleService {
         return shiftWeekday(baseWeekdayMinistranci(), monthOffsetFromBase(date));
     }
 
+    public Map<String, List<String>> weekdayMinistranciFromBase(LocalDate date) {
+        return shiftWeekday(baseWeekdayMinistranci(), monthOffsetFromBase(date));
+    }
+
     public Map<String, List<String>> weekdayLektorzy(LocalDate date) {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
@@ -85,6 +93,10 @@ public class ScheduleService {
             }
             return map;
         }
+        return shiftWeekday(baseWeekdayLektorzy(), monthOffsetFromBase(date));
+    }
+
+    public Map<String, List<String>> weekdayLektorzyFromBase(LocalDate date) {
         return shiftWeekday(baseWeekdayLektorzy(), monthOffsetFromBase(date));
     }
 

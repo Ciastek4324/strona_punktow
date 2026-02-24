@@ -222,16 +222,26 @@ public class PointsController {
     @GetMapping("/generator")
     public String generator(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                             @RequestParam(required = false, defaultValue = "monthly") String tab,
+                            @RequestParam(required = false, defaultValue = "false") boolean useSchedule,
                             Model model) {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
         model.addAttribute("dateParam", effectiveDate.toString());
         model.addAttribute("tab", tab);
+        model.addAttribute("useSchedule", useSchedule);
 
-        model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
-        Map<String, List<String>> weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
-        Map<String, List<String>> weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
+        Map<String, List<String>> weekdayMinistranciShifted;
+        Map<String, List<String>> weekdayLektorzyShifted;
+        if (useSchedule) {
+            model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
+            weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
+            weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
+        } else {
+            model.addAttribute("sunday", scheduleService.sundayDataFromBase(effectiveDate));
+            weekdayMinistranciShifted = scheduleService.weekdayMinistranciFromBase(effectiveDate);
+            weekdayLektorzyShifted = scheduleService.weekdayLektorzyFromBase(effectiveDate);
+        }
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
         model.addAttribute("weekdayAspiranci", scheduleService.weekdayAspiranci());
@@ -345,14 +355,23 @@ public class PointsController {
 
     @GetMapping("/generator/print")
     public String generatorPrint(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                                 @RequestParam(required = false, defaultValue = "false") boolean useSchedule,
                                  Model model) {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
 
-        model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
-        Map<String, List<String>> weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
-        Map<String, List<String>> weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
+        Map<String, List<String>> weekdayMinistranciShifted;
+        Map<String, List<String>> weekdayLektorzyShifted;
+        if (useSchedule) {
+            model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
+            weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
+            weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
+        } else {
+            model.addAttribute("sunday", scheduleService.sundayDataFromBase(effectiveDate));
+            weekdayMinistranciShifted = scheduleService.weekdayMinistranciFromBase(effectiveDate);
+            weekdayLektorzyShifted = scheduleService.weekdayLektorzyFromBase(effectiveDate);
+        }
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
         model.addAttribute("weekdayAspiranci", scheduleService.weekdayAspiranci());
