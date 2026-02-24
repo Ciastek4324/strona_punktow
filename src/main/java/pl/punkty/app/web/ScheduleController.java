@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.MultiValueMap;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.service.PeopleService;
 import pl.punkty.app.service.ScheduleService;
@@ -22,12 +23,24 @@ import java.util.Map;
 @Controller
 public class ScheduleController {
     private static final List<Slot> SLOTS = List.of(
-        new Slot("Poniedzialek", 1),
-        new Slot("Wtorek", 2),
-        new Slot("Sroda", 3),
-        new Slot("Czwartek", 4),
-        new Slot("Piatek", 5),
-        new Slot("Sobota", 6),
+        new Slot("Poniedzialek - Aspiranci", 11),
+        new Slot("Poniedzialek - Ministranci", 12),
+        new Slot("Poniedzialek - Lektorzy", 13),
+        new Slot("Wtorek - Aspiranci", 21),
+        new Slot("Wtorek - Ministranci", 22),
+        new Slot("Wtorek - Lektorzy", 23),
+        new Slot("Sroda - Aspiranci", 31),
+        new Slot("Sroda - Ministranci", 32),
+        new Slot("Sroda - Lektorzy", 33),
+        new Slot("Czwartek - Aspiranci", 41),
+        new Slot("Czwartek - Ministranci", 42),
+        new Slot("Czwartek - Lektorzy", 43),
+        new Slot("Piatek - Aspiranci", 51),
+        new Slot("Piatek - Ministranci", 52),
+        new Slot("Piatek - Lektorzy", 53),
+        new Slot("Sobota - Aspiranci", 61),
+        new Slot("Sobota - Ministranci", 62),
+        new Slot("Sobota - Lektorzy", 63),
         new Slot("Niedziela R", 71),
         new Slot("Niedziela S", 72),
         new Slot("Niedziela P", 73)
@@ -49,7 +62,7 @@ public class ScheduleController {
         YearMonth month = YearMonth.of(effective.getYear(), effective.getMonth());
         LocalDate monthDate = LocalDate.of(month.getYear(), month.getMonth(), 1);
 
-        Map<Integer, List<Long>> slotIds = scheduleService.loadScheduleSlotIds(monthDate);
+        Map<Integer, List<Long>> slotIds = normalizeSlots(scheduleService.loadScheduleSlotIds(monthDate));
         Map<Long, Person> personById = new LinkedHashMap<>();
         for (Person person : peopleService.getPeopleSorted()) {
             personById.put(person.getId(), person);
@@ -79,7 +92,7 @@ public class ScheduleController {
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @Transactional
     public String saveSchedule(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-                               @RequestParam Map<String, String> params) {
+                               @RequestParam MultiValueMap<String, String> params) {
         Map<Integer, List<Long>> slotToPeople = new LinkedHashMap<>();
         for (String key : params.keySet()) {
             if (!key.startsWith("slot_")) {
@@ -92,17 +105,22 @@ public class ScheduleController {
             } catch (NumberFormatException ex) {
                 continue;
             }
-            String value = params.get(key);
-            if (value == null || value.isBlank()) {
+            List<String> values = params.get(key);
+            if (values == null || values.isEmpty()) {
                 continue;
             }
-            long personId;
-            try {
-                personId = Long.parseLong(value);
-            } catch (NumberFormatException ex) {
-                continue;
+            for (String value : values) {
+                if (value == null || value.isBlank()) {
+                    continue;
+                }
+                long personId;
+                try {
+                    personId = Long.parseLong(value);
+                } catch (NumberFormatException ex) {
+                    continue;
+                }
+                slotToPeople.computeIfAbsent(slotCode, k -> new ArrayList<>()).add(personId);
             }
-            slotToPeople.computeIfAbsent(slotCode, k -> new ArrayList<>()).add(personId);
         }
         scheduleService.saveSchedule(date, slotToPeople);
         return "redirect:/schedule?date=" + date;
@@ -111,4 +129,21 @@ public class ScheduleController {
     public record Slot(String label, int code) { }
 
     public record PersonChip(String name, Long id) { }
+
+    private Map<Integer, List<Long>> normalizeSlots(Map<Integer, List<Long>> raw) {
+        Map<Integer, List<Long>> normalized = new LinkedHashMap<>();
+        boolean hasRoleSlots = raw.keySet().stream().anyMatch(k -> k != null && k >= 11 && k <= 63);
+        if (hasRoleSlots) {
+            return raw;
+        }
+        for (Map.Entry<Integer, List<Long>> entry : raw.entrySet()) {
+            int slot = entry.getKey();
+            int mapped = slot;
+            if (slot >= 1 && slot <= 6) {
+                mapped = (slot * 10) + 2;
+            }
+            normalized.computeIfAbsent(mapped, k -> new ArrayList<>()).addAll(entry.getValue());
+        }
+        return normalized;
+    }
 }

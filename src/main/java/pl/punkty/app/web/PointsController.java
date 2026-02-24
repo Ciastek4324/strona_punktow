@@ -233,18 +233,21 @@ public class PointsController {
 
         Map<String, List<String>> weekdayMinistranciShifted;
         Map<String, List<String>> weekdayLektorzyShifted;
+        Map<String, List<String>> weekdayAspiranciShifted;
         if (useSchedule) {
             model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
             weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
             weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
+            weekdayAspiranciShifted = scheduleService.weekdayAspiranci(effectiveDate);
         } else {
             model.addAttribute("sunday", scheduleService.sundayDataFromBase(effectiveDate));
             weekdayMinistranciShifted = scheduleService.weekdayMinistranciFromBase(effectiveDate);
             weekdayLektorzyShifted = scheduleService.weekdayLektorzyFromBase(effectiveDate);
+            weekdayAspiranciShifted = scheduleService.weekdayAspiranciFromBase(effectiveDate);
         }
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
-        model.addAttribute("weekdayAspiranci", scheduleService.weekdayAspiranci());
+        model.addAttribute("weekdayAspiranci", weekdayAspiranciShifted);
 
         List<Person> people = peopleService.getPeopleSorted();
 
@@ -363,18 +366,21 @@ public class PointsController {
 
         Map<String, List<String>> weekdayMinistranciShifted;
         Map<String, List<String>> weekdayLektorzyShifted;
+        Map<String, List<String>> weekdayAspiranciShifted;
         if (useSchedule) {
             model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
             weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
             weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
+            weekdayAspiranciShifted = scheduleService.weekdayAspiranci(effectiveDate);
         } else {
             model.addAttribute("sunday", scheduleService.sundayDataFromBase(effectiveDate));
             weekdayMinistranciShifted = scheduleService.weekdayMinistranciFromBase(effectiveDate);
             weekdayLektorzyShifted = scheduleService.weekdayLektorzyFromBase(effectiveDate);
+            weekdayAspiranciShifted = scheduleService.weekdayAspiranciFromBase(effectiveDate);
         }
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
         model.addAttribute("weekdayLektorzy", weekdayLektorzyShifted);
-        model.addAttribute("weekdayAspiranci", scheduleService.weekdayAspiranci());
+        model.addAttribute("weekdayAspiranci", weekdayAspiranciShifted);
 
         return "generator-print";
     }

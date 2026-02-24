@@ -83,6 +83,7 @@
             <div class="schedule-shell">
                 <div>
                     <div class="notice">Lista osob (przeciagnij do dnia)</div>
+                    <input id="peopleSearch" type="text" placeholder="Szukaj osoby..." style="margin:8px 0; width:100%; padding:8px 10px; border:1px solid var(--stroke); border-radius:10px;" />
                     <div class="people-list" id="peopleList">
                         <div class="person-chip"
                              th:each="p : ${people}"
@@ -174,6 +175,17 @@
             drop.appendChild(makeChip(data.id, data.name, slotCode));
         });
     });
+
+    const searchInput = document.getElementById("peopleSearch");
+    if (searchInput) {
+        searchInput.addEventListener("input", () => {
+            const query = searchInput.value.toLowerCase().trim();
+            document.querySelectorAll("#peopleList .person-chip").forEach(chip => {
+                const name = (chip.dataset.personName || "").toLowerCase();
+                chip.style.display = name.includes(query) ? "inline-flex" : "none";
+            });
+        });
+    }
 </script>
 </body>
 </html>

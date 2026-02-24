@@ -127,8 +127,9 @@
         </div>
         <div>
             <div class="label">ASPIRANCI:</div>
-            <div class="aspiranci-list">
-                <div th:each="name : ${weekdayAspiranci}" th:text="${name}">Osoba</div>
+            <div th:each="entry : ${weekdayAspiranci}" class="line">
+                <span class="day" th:text="${entry.key}">Dzien</span> -
+                <span th:text="${#strings.listJoin(entry.value, ', ')}">Lista</span>
             </div>
         </div>
     </div>

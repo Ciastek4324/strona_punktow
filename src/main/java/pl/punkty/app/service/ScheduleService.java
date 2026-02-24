@@ -25,6 +25,10 @@ public class ScheduleService {
     private final MonthlyScheduleEntryRepository entryRepository;
     private final PersonRepository personRepository;
 
+    private static final int ROLE_ASPIRANT = 1;
+    private static final int ROLE_MINISTRANT = 2;
+    private static final int ROLE_LEKTOR = 3;
+
     public ScheduleService(MonthlyScheduleRepository scheduleRepository,
                            MonthlyScheduleEntryRepository entryRepository,
                            PersonRepository personRepository) {
@@ -72,8 +76,13 @@ public class ScheduleService {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
             Map<String, List<String>> map = new LinkedHashMap<>();
+            boolean roleSlots = hasRoleSlots(slots);
             for (int i = 0; i < WEEK_DAYS.size(); i++) {
-                map.put(WEEK_DAYS.get(i), slots.getOrDefault(i + 1, List.of()));
+                int day = i + 1;
+                List<String> names = roleSlots
+                    ? slots.getOrDefault(roleSlotCode(day, ROLE_MINISTRANT), List.of())
+                    : slots.getOrDefault(day, List.of());
+                map.put(WEEK_DAYS.get(i), names);
             }
             return map;
         }
@@ -88,8 +97,13 @@ public class ScheduleService {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
             Map<String, List<String>> map = new LinkedHashMap<>();
+            boolean roleSlots = hasRoleSlots(slots);
             for (int i = 0; i < WEEK_DAYS.size(); i++) {
-                map.put(WEEK_DAYS.get(i), List.of());
+                int day = i + 1;
+                List<String> names = roleSlots
+                    ? slots.getOrDefault(roleSlotCode(day, ROLE_LEKTOR), List.of())
+                    : List.of();
+                map.put(WEEK_DAYS.get(i), names);
             }
             return map;
         }
@@ -100,24 +114,56 @@ public class ScheduleService {
         return shiftWeekday(baseWeekdayLektorzy(), monthOffsetFromBase(date));
     }
 
-    public List<String> weekdayAspiranci() {
+    private List<String> baseWeekdayAspiranci() {
         return List.of("Krzysztof Wierzycki", "Rafal Opoka", "Wojciech Zelek");
+    }
+
+    public Map<String, List<String>> weekdayAspiranci(LocalDate date) {
+        Map<Integer, List<String>> slots = loadScheduleSlots(date);
+        if (!slots.isEmpty()) {
+            Map<String, List<String>> map = new LinkedHashMap<>();
+            boolean roleSlots = hasRoleSlots(slots);
+            for (int i = 0; i < WEEK_DAYS.size(); i++) {
+                int day = i + 1;
+                List<String> names = roleSlots
+                    ? slots.getOrDefault(roleSlotCode(day, ROLE_ASPIRANT), List.of())
+                    : baseWeekdayAspiranci();
+                map.put(WEEK_DAYS.get(i), names);
+            }
+            return map;
+        }
+        return baseWeekdayAspiranciByDay();
+    }
+
+    public Map<String, List<String>> weekdayAspiranciFromBase(LocalDate date) {
+        return baseWeekdayAspiranciByDay();
     }
 
     public Map<Integer, Set<String>> scheduledByDay(LocalDate date) {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
             Map<Integer, Set<String>> byDay = new HashMap<>();
+            boolean roleSlots = hasRoleSlots(slots);
+            List<String> aspiranci = roleSlots ? List.of() : baseWeekdayAspiranci();
             for (int i = 0; i < WEEK_DAYS.size(); i++) {
                 int code = i + 1;
-                byDay.put(code, new HashSet<>(slots.getOrDefault(code, List.of())));
+                Set<String> names = new HashSet<>();
+                if (roleSlots) {
+                    names.addAll(slots.getOrDefault(roleSlotCode(code, ROLE_ASPIRANT), List.of()));
+                    names.addAll(slots.getOrDefault(roleSlotCode(code, ROLE_MINISTRANT), List.of()));
+                    names.addAll(slots.getOrDefault(roleSlotCode(code, ROLE_LEKTOR), List.of()));
+                } else {
+                    names.addAll(slots.getOrDefault(code, List.of()));
+                    names.addAll(aspiranci);
+                }
+                byDay.put(code, names);
             }
             return byDay;
         }
 
         Map<String, List<String>> ministranci = weekdayMinistranci(date);
         Map<String, List<String>> lektorzy = weekdayLektorzy(date);
-        Set<String> aspiranci = new HashSet<>(weekdayAspiranci());
+        Map<String, List<String>> aspiranci = weekdayAspiranci(date);
 
         Map<Integer, Set<String>> byDay = new HashMap<>();
         for (int i = 0; i < WEEK_DAYS.size(); i++) {
@@ -125,7 +171,7 @@ public class ScheduleService {
             Set<String> names = new HashSet<>();
             names.addAll(ministranci.getOrDefault(day, List.of()));
             names.addAll(lektorzy.getOrDefault(day, List.of()));
-            names.addAll(aspiranci);
+            names.addAll(aspiranci.getOrDefault(day, List.of()));
             byDay.put(i + 1, names);
         }
         return byDay;
@@ -192,6 +238,15 @@ public class ScheduleService {
         weekdayLektorzy.put("Piatek", List.of("Stanislaw Lubecki", "Jan Migacz"));
         weekdayLektorzy.put("Sobota", List.of("Szymon Mucha", "Jakub Mucha"));
         return weekdayLektorzy;
+    }
+
+    private Map<String, List<String>> baseWeekdayAspiranciByDay() {
+        Map<String, List<String>> map = new LinkedHashMap<>();
+        List<String> aspiranci = baseWeekdayAspiranci();
+        for (String day : WEEK_DAYS) {
+            map.put(day, aspiranci);
+        }
+        return map;
     }
 
     private Map<String, List<String>> baseSundayData() {
@@ -334,7 +389,14 @@ public class ScheduleService {
 
     private int shiftWeekdaySlot(int slot) {
         if (slot >= 1 && slot <= 6) {
-            return (slot % 6) + 1;
+            int shiftedDay = (slot % 6) + 1;
+            return roleSlotCode(shiftedDay, ROLE_MINISTRANT);
+        }
+        if (slot >= 11 && slot <= 63) {
+            int day = slot / 10;
+            int role = slot % 10;
+            int shiftedDay = (day % 6) + 1;
+            return (shiftedDay * 10) + role;
         }
         return slot;
     }
@@ -348,16 +410,23 @@ public class ScheduleService {
         int offset = monthOffsetFromBase(date);
         Map<String, List<String>> ministranci = shiftWeekday(baseWeekdayMinistranci(), offset);
         Map<String, List<String>> lektorzy = shiftWeekday(baseWeekdayLektorzy(), offset);
-        List<String> aspiranci = weekdayAspiranci();
+        List<String> aspiranci = baseWeekdayAspiranci();
 
         Map<Integer, List<Long>> slots = new LinkedHashMap<>();
         for (int i = 0; i < WEEK_DAYS.size(); i++) {
             String day = WEEK_DAYS.get(i);
-            List<Long> ids = new ArrayList<>();
-            addNames(ids, ministranci.getOrDefault(day, List.of()), nameToId);
-            addNames(ids, lektorzy.getOrDefault(day, List.of()), nameToId);
-            addNames(ids, aspiranci, nameToId);
-            slots.put(i + 1, ids);
+            int dayCode = i + 1;
+            List<Long> aspIds = new ArrayList<>();
+            addNames(aspIds, aspiranci, nameToId);
+            slots.put(roleSlotCode(dayCode, ROLE_ASPIRANT), aspIds);
+
+            List<Long> minIds = new ArrayList<>();
+            addNames(minIds, ministranci.getOrDefault(day, List.of()), nameToId);
+            slots.put(roleSlotCode(dayCode, ROLE_MINISTRANT), minIds);
+
+            List<Long> lekIds = new ArrayList<>();
+            addNames(lekIds, lektorzy.getOrDefault(day, List.of()), nameToId);
+            slots.put(roleSlotCode(dayCode, ROLE_LEKTOR), lekIds);
         }
 
         Map<String, List<String>> sunday = baseSundayData();
@@ -374,6 +443,19 @@ public class ScheduleService {
         }
         slots.putAll(sundaySlots);
         return slots;
+    }
+
+    private boolean hasRoleSlots(Map<Integer, List<String>> slots) {
+        for (Integer key : slots.keySet()) {
+            if (key != null && key >= 11 && key <= 63) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int roleSlotCode(int day, int role) {
+        return (day * 10) + role;
     }
 
     private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {
