@@ -6,6 +6,8 @@ import pl.punkty.app.model.Person;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.model.PersonRole;
+import pl.punkty.app.repo.MonthlyScheduleEntryRepository;
+import pl.punkty.app.repo.MonthlyScheduleRepository;
 import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
@@ -23,9 +25,11 @@ class PointsServiceTest {
     void monthPointsCountsAttendancesInsideMonth() throws Exception {
         WeeklyTableRepository tableRepo = Mockito.mock(WeeklyTableRepository.class);
         WeeklyAttendanceRepository attendanceRepo = Mockito.mock(WeeklyAttendanceRepository.class);
+        MonthlyScheduleRepository scheduleRepo = Mockito.mock(MonthlyScheduleRepository.class);
+        MonthlyScheduleEntryRepository entryRepo = Mockito.mock(MonthlyScheduleEntryRepository.class);
         PersonRepository personRepo = Mockito.mock(PersonRepository.class);
         PeopleService peopleService = new PeopleService(personRepo);
-        ScheduleService scheduleService = new ScheduleService();
+        ScheduleService scheduleService = new ScheduleService(scheduleRepo, entryRepo, personRepo);
         PointsService service = new PointsService(tableRepo, attendanceRepo, peopleService, scheduleService);
 
         WeeklyTable table = new WeeklyTable();
