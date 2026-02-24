@@ -65,6 +65,9 @@ public class PointsService {
 
             Map<Long, Set<Integer>> presentByPerson = new HashMap<>();
             List<WeeklyAttendance> attendances = byTable.getOrDefault(table.getId(), List.of());
+            if (attendances.isEmpty()) {
+                continue;
+            }
             Map<Long, Integer> otherCounts = new HashMap<>();
             for (WeeklyAttendance attendance : attendances) {
                 Long pid = attendance.getPerson().getId();
