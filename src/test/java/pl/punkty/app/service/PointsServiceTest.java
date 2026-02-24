@@ -5,6 +5,8 @@ import org.mockito.Mockito;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
+import pl.punkty.app.model.PersonRole;
+import pl.punkty.app.repo.PersonRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
 
@@ -21,13 +23,18 @@ class PointsServiceTest {
     void monthPointsCountsAttendancesInsideMonth() throws Exception {
         WeeklyTableRepository tableRepo = Mockito.mock(WeeklyTableRepository.class);
         WeeklyAttendanceRepository attendanceRepo = Mockito.mock(WeeklyAttendanceRepository.class);
-        PointsService service = new PointsService(tableRepo, attendanceRepo);
+        PersonRepository personRepo = Mockito.mock(PersonRepository.class);
+        PeopleService peopleService = new PeopleService(personRepo);
+        ScheduleService scheduleService = new ScheduleService();
+        PointsService service = new PointsService(tableRepo, attendanceRepo, peopleService, scheduleService);
 
         WeeklyTable table = new WeeklyTable();
         table.setWeekStart(LocalDate.of(2026, 2, 2));
 
         Person person = new Person();
         setId(person, 10L);
+        person.setDisplayName("Jan Test");
+        person.setRole(PersonRole.MINISTRANT);
 
         WeeklyAttendance attendance = new WeeklyAttendance();
         attendance.setTableRef(table);
@@ -39,6 +46,7 @@ class PointsServiceTest {
             .thenReturn(List.of(table));
         when(attendanceRepo.findByTableRefIn(List.of(table)))
             .thenReturn(List.of(attendance));
+        when(personRepo.findAll()).thenReturn(List.of(person));
 
         Map<Long, Integer> result = service.monthPoints(LocalDate.of(2026, 2, 5));
         assertEquals(1, result.get(10L));
