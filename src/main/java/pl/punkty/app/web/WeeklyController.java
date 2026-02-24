@@ -198,6 +198,12 @@ public class WeeklyController {
         return "redirect:/weekly?week=" + weekStart;
     }
 
+    @PostMapping("/weekly/reset")
+    public String weeklyReset(@RequestParam("weekStart") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        tableRepository.findByWeekStart(weekStart).ifPresent(attendanceRepository::deleteByTableRef);
+        return "redirect:/weekly?week=" + weekStart;
+    }
+
     @GetMapping("/calendar")
     public String calendar(@RequestParam(required = false) Integer year, Model model) {
         int selectedYear = (year == null) ? LocalDate.now().getYear() : year;
