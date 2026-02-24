@@ -6,6 +6,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.transaction.annotation.Transactional;
 import pl.punkty.app.model.CurrentPoints;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PointsSnapshot;
@@ -199,9 +200,18 @@ public class WeeklyController {
     }
 
     @PostMapping("/weekly/reset")
-    public String weeklyReset(@RequestParam("weekStart") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        tableRepository.findByWeekStart(weekStart).ifPresent(attendanceRepository::deleteByTableRef);
-        return "redirect:/weekly?week=" + weekStart;
+    @Transactional
+    public String weeklyReset(@RequestParam(value = "weekStart", required = false)
+                              @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        if (weekStart == null) {
+            return "redirect:/weekly";
+        }
+        try {
+            tableRepository.findByWeekStart(weekStart).ifPresent(attendanceRepository::deleteByTableRef);
+        } catch (Exception ex) {
+            return "redirect:/weekly?week=" + weekStart + "&reset=error";
+        }
+        return "redirect:/weekly?week=" + weekStart + "&reset=ok";
     }
 
     @GetMapping("/calendar")
