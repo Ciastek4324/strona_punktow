@@ -1,10 +1,17 @@
 package pl.punkty.app.service;
 
 import org.springframework.stereotype.Service;
+import pl.punkty.app.model.MonthlySchedule;
+import pl.punkty.app.model.MonthlyScheduleEntry;
+import pl.punkty.app.model.Person;
+import pl.punkty.app.repo.MonthlyScheduleEntryRepository;
+import pl.punkty.app.repo.MonthlyScheduleRepository;
+import pl.punkty.app.repo.PersonRepository;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -14,6 +21,18 @@ import java.util.Set;
 
 @Service
 public class ScheduleService {
+    private final MonthlyScheduleRepository scheduleRepository;
+    private final MonthlyScheduleEntryRepository entryRepository;
+    private final PersonRepository personRepository;
+
+    public ScheduleService(MonthlyScheduleRepository scheduleRepository,
+                           MonthlyScheduleEntryRepository entryRepository,
+                           PersonRepository personRepository) {
+        this.scheduleRepository = scheduleRepository;
+        this.entryRepository = entryRepository;
+        this.personRepository = personRepository;
+    }
+
     private static final List<String> WEEK_DAYS = List.of(
         "Poniedzialek",
         "Wtorek",
@@ -24,6 +43,24 @@ public class ScheduleService {
     );
 
     public Map<String, List<String>> sundayData() {
+        return sundayData(LocalDate.now());
+    }
+
+    public Map<String, List<String>> sundayData(LocalDate date) {
+        Map<Integer, List<String>> slots = loadScheduleSlots(date);
+        if (!slots.isEmpty()) {
+            Map<String, List<String>> sunday = new LinkedHashMap<>();
+            sunday.put("PRYMARIA (aspiranci)", List.of());
+            sunday.put("PRYMARIA (ministranci)", slots.getOrDefault(71, List.of()));
+            sunday.put("PRYMARIA (lektorzy)", List.of());
+            sunday.put("SUMA (aspiranci)", List.of());
+            sunday.put("SUMA (ministranci)", slots.getOrDefault(72, List.of()));
+            sunday.put("SUMA (lektorzy)", List.of());
+            sunday.put("III MSZA (aspiranci)", List.of());
+            sunday.put("III MSZA (ministranci)", slots.getOrDefault(73, List.of()));
+            sunday.put("III MSZA (lektorzy)", List.of());
+            return sunday;
+        }
         Map<String, List<String>> sunday = new LinkedHashMap<>();
         sunday.put("PRYMARIA (aspiranci)", List.of("Rafal Opoka"));
         sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
@@ -38,10 +75,26 @@ public class ScheduleService {
     }
 
     public Map<String, List<String>> weekdayMinistranci(LocalDate date) {
+        Map<Integer, List<String>> slots = loadScheduleSlots(date);
+        if (!slots.isEmpty()) {
+            Map<String, List<String>> map = new LinkedHashMap<>();
+            for (int i = 0; i < WEEK_DAYS.size(); i++) {
+                map.put(WEEK_DAYS.get(i), slots.getOrDefault(i + 1, List.of()));
+            }
+            return map;
+        }
         return shiftWeekday(baseWeekdayMinistranci(), monthOffsetFromBase(date));
     }
 
     public Map<String, List<String>> weekdayLektorzy(LocalDate date) {
+        Map<Integer, List<String>> slots = loadScheduleSlots(date);
+        if (!slots.isEmpty()) {
+            Map<String, List<String>> map = new LinkedHashMap<>();
+            for (int i = 0; i < WEEK_DAYS.size(); i++) {
+                map.put(WEEK_DAYS.get(i), List.of());
+            }
+            return map;
+        }
         return shiftWeekday(baseWeekdayLektorzy(), monthOffsetFromBase(date));
     }
 
@@ -50,6 +103,16 @@ public class ScheduleService {
     }
 
     public Map<Integer, Set<String>> scheduledByDay(LocalDate date) {
+        Map<Integer, List<String>> slots = loadScheduleSlots(date);
+        if (!slots.isEmpty()) {
+            Map<Integer, Set<String>> byDay = new HashMap<>();
+            for (int i = 0; i < WEEK_DAYS.size(); i++) {
+                int code = i + 1;
+                byDay.put(code, new HashSet<>(slots.getOrDefault(code, List.of())));
+            }
+            return byDay;
+        }
+
         Map<String, List<String>> ministranci = weekdayMinistranci(date);
         Map<String, List<String>> lektorzy = weekdayLektorzy(date);
         Set<String> aspiranci = new HashSet<>(weekdayAspiranci());
@@ -67,11 +130,24 @@ public class ScheduleService {
     }
 
     public Map<Integer, Set<String>> scheduledSundaySlots() {
+        return scheduledSundaySlots(LocalDate.now());
+    }
+
+    public Map<Integer, Set<String>> scheduledSundaySlots(LocalDate date) {
+        Map<Integer, List<String>> slots = loadScheduleSlots(date);
+        if (!slots.isEmpty()) {
+            Map<Integer, Set<String>> bySlot = new HashMap<>();
+            bySlot.put(71, new HashSet<>(slots.getOrDefault(71, List.of())));
+            bySlot.put(72, new HashSet<>(slots.getOrDefault(72, List.of())));
+            bySlot.put(73, new HashSet<>(slots.getOrDefault(73, List.of())));
+            return bySlot;
+        }
+
         Map<Integer, Set<String>> bySlot = new HashMap<>();
         bySlot.put(71, new HashSet<>());
         bySlot.put(72, new HashSet<>());
         bySlot.put(73, new HashSet<>());
-        for (Map.Entry<String, List<String>> entry : sundayData().entrySet()) {
+        for (Map.Entry<String, List<String>> entry : sundayData(date).entrySet()) {
             int slot = sundaySlotFromKey(entry.getKey());
             if (slot == 0) {
                 continue;
@@ -138,5 +214,81 @@ public class ScheduleService {
             shifted.put(toDay, original.getOrDefault(fromDay, List.of()));
         }
         return shifted;
+    }
+
+    public Map<Integer, List<String>> loadScheduleSlots(LocalDate date) {
+        YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
+        LocalDate monthDate = LocalDate.of(month.getYear(), month.getMonth(), 1);
+        MonthlySchedule schedule = scheduleRepository.findByMonthDate(monthDate).orElse(null);
+        if (schedule == null) {
+            return Map.of();
+        }
+        List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(schedule);
+        Map<Integer, List<String>> slots = new HashMap<>();
+        for (MonthlyScheduleEntry entry : entries) {
+            slots.computeIfAbsent(entry.getSlotCode(), k -> new ArrayList<>())
+                .add(entry.getPerson().getDisplayName());
+        }
+        return slots;
+    }
+
+    public Map<Integer, List<Long>> loadScheduleSlotIds(LocalDate date) {
+        YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
+        LocalDate monthDate = LocalDate.of(month.getYear(), month.getMonth(), 1);
+        MonthlySchedule schedule = scheduleRepository.findByMonthDate(monthDate).orElse(null);
+        if (schedule == null) {
+            return Map.of();
+        }
+        List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(schedule);
+        Map<Integer, List<Long>> slots = new HashMap<>();
+        for (MonthlyScheduleEntry entry : entries) {
+            slots.computeIfAbsent(entry.getSlotCode(), k -> new ArrayList<>())
+                .add(entry.getPerson().getId());
+        }
+        return slots;
+    }
+
+    public MonthlySchedule loadOrCreateSchedule(LocalDate date) {
+        YearMonth month = YearMonth.of(date.getYear(), date.getMonth());
+        LocalDate monthDate = LocalDate.of(month.getYear(), month.getMonth(), 1);
+        return scheduleRepository.findByMonthDate(monthDate)
+            .orElseGet(() -> {
+                MonthlySchedule created = new MonthlySchedule();
+                created.setMonthDate(monthDate);
+                return scheduleRepository.save(created);
+            });
+    }
+
+    public void saveSchedule(LocalDate date, Map<Integer, List<Long>> slotToPeople) {
+        MonthlySchedule schedule = loadOrCreateSchedule(date);
+        entryRepository.deleteBySchedule(schedule);
+        List<Person> people = personRepository.findAllById(
+            slotToPeople.values().stream().flatMap(List::stream).toList()
+        );
+        Map<Long, Person> personMap = new HashMap<>();
+        for (Person person : people) {
+            personMap.put(person.getId(), person);
+        }
+
+        List<MonthlyScheduleEntry> toSave = new ArrayList<>();
+        for (Map.Entry<Integer, List<Long>> entry : slotToPeople.entrySet()) {
+            int slot = entry.getKey();
+            int pos = 0;
+            for (Long personId : entry.getValue()) {
+                Person person = personMap.get(personId);
+                if (person == null) {
+                    continue;
+                }
+                MonthlyScheduleEntry ms = new MonthlyScheduleEntry();
+                ms.setSchedule(schedule);
+                ms.setPerson(person);
+                ms.setSlotCode(slot);
+                ms.setPosition(pos++);
+                toSave.add(ms);
+            }
+        }
+        if (!toSave.isEmpty()) {
+            entryRepository.saveAll(toSave);
+        }
     }
 }

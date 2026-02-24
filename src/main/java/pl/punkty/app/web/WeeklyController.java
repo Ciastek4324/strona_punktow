@@ -229,9 +229,6 @@ public class WeeklyController {
                 created.setWeekStart(weekStart);
                 return tableRepository.save(created);
             });
-        if (attendanceRepository.findByTableRef(table).isEmpty()) {
-            return "redirect:/weekly?week=" + weekStart + "&complete=empty";
-        }
         table.setCompleted(true);
         tableRepository.save(table);
         return "redirect:/weekly?week=" + weekStart + "&complete=ok";

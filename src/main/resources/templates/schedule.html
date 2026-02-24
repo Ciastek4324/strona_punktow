@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grafik miesieczny</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+        .schedule-shell {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 16px;
+        }
+        .people-list {
+            display: grid;
+            gap: 8px;
+        }
+        .person-chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--stroke);
+            background: #fff;
+            cursor: grab;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .slot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .slot-card {
+            border-radius: 14px;
+            border: 1px solid var(--stroke);
+            background: #fff;
+            padding: 12px;
+            min-height: 140px;
+        }
+        .slot-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .slot-drop {
+            display: grid;
+            gap: 6px;
+            min-height: 80px;
+        }
+        .remove-btn {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+        }
+        .drag-over {
+            outline: 2px dashed var(--accent);
+            outline-offset: 4px;
+        }
+    </style>
+</head>
+<body class="bg">
+<div class="shell">
+    <div class="card wide">
+        <div class="row">
+            <h1>Grafik miesieczny</h1>
+            <a class="ghost" href="/dashboard">Powrot</a>
+        </div>
+
+        <form method="get" action="/schedule" class="row">
+            <label>
+                Miesiac
+                <input type="date" name="date" th:value="${dateParam}" />
+            </label>
+            <button type="submit" class="primary">Zmien</button>
+        </form>
+
+        <form method="post" action="/schedule/save" id="scheduleForm">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <input type="hidden" name="date" th:value="${dateParam}" />
+
+            <div class="schedule-shell">
+                <div>
+                    <div class="notice">Lista osob (przeciagnij do dnia)</div>
+                    <div class="people-list" id="peopleList">
+                        <div class="person-chip"
+                             th:each="p : ${people}"
+                             draggable="true"
+                             th:attr="data-person-id=${p.id},data-person-name=${p.displayName}">
+                            <span th:text="${p.displayName}">Osoba</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="slot-grid">
+                    <div class="slot-card" th:each="slot : ${slots}">
+                        <div class="slot-title" th:text="${slot.label}">Poniedzialek</div>
+                        <div class="slot-drop" th:attr="data-slot=${slot.code}">
+                            <div class="person-chip"
+                                 th:each="chip : ${slotPeople[slot.code]}"
+                                 draggable="true"
+                                 th:attr="data-person-id=${chip.id},data-person-name=${chip.name}">
+                                <span th:text="${chip.name}">Osoba</span>
+                                <button type="button" class="remove-btn" onclick="removeChip(this)">x</button>
+                                <input type="hidden" th:name="${'slot_' + slot.code}" th:value="${chip.id}" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="save-bar" style="margin-top:16px;">
+                <button type="submit" class="primary">Zapisz grafik</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function makeChip(personId, name, slotCode) {
+        const chip = document.createElement("div");
+        chip.className = "person-chip";
+        chip.setAttribute("draggable", "true");
+        chip.dataset.personId = personId;
+        chip.dataset.personName = name;
+        chip.innerHTML = `<span>${name}</span><button type="button" class="remove-btn" onclick="removeChip(this)">x</button>`;
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "slot_" + slotCode;
+        input.value = personId;
+        chip.appendChild(input);
+        attachDrag(chip);
+        return chip;
+    }
+
+    function removeChip(btn) {
+        const chip = btn.closest(".person-chip");
+        chip.remove();
+    }
+
+    function attachDrag(el) {
+        el.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", JSON.stringify({
+                id: el.dataset.personId,
+                name: el.dataset.personName,
+                fromSlot: el.closest(".slot-drop")?.dataset.slot || ""
+            }));
+        });
+    }
+
+    document.querySelectorAll(".person-chip").forEach(attachDrag);
+
+    document.querySelectorAll(".slot-drop").forEach(drop => {
+        drop.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            drop.classList.add("drag-over");
+        });
+        drop.addEventListener("dragleave", () => drop.classList.remove("drag-over"));
+        drop.addEventListener("drop", (e) => {
+            e.preventDefault();
+            drop.classList.remove("drag-over");
+            const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+            const slotCode = drop.dataset.slot;
+
+            if (data.fromSlot) {
+                const existing = [...document.querySelectorAll(".slot-drop .person-chip")]
+                    .find(chip => chip.dataset.personId === data.id && chip.closest(".slot-drop")?.dataset.slot === data.fromSlot);
+                if (existing) {
+                    existing.querySelector("input").name = "slot_" + slotCode;
+                    drop.appendChild(existing);
+                    return;
+                }
+            }
+            drop.appendChild(makeChip(data.id, data.name, slotCode));
+        });
+    });
+</script>
+</body>
+</html>

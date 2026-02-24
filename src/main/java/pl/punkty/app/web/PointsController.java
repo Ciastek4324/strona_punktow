@@ -229,7 +229,7 @@ public class PointsController {
         model.addAttribute("dateParam", effectiveDate.toString());
         model.addAttribute("tab", tab);
 
-        model.addAttribute("sunday", scheduleService.sundayData());
+        model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
         Map<String, List<String>> weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
         Map<String, List<String>> weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);
@@ -350,7 +350,7 @@ public class PointsController {
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
 
-        model.addAttribute("sunday", scheduleService.sundayData());
+        model.addAttribute("sunday", scheduleService.sundayData(effectiveDate));
         Map<String, List<String>> weekdayMinistranciShifted = scheduleService.weekdayMinistranci(effectiveDate);
         Map<String, List<String>> weekdayLektorzyShifted = scheduleService.weekdayLektorzy(effectiveDate);
         model.addAttribute("weekdayMinistranci", weekdayMinistranciShifted);

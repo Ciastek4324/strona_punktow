@@ -61,7 +61,7 @@ public class PointsService {
                 continue;
             }
             Map<Integer, Set<String>> scheduled = scheduleService.scheduledByDay(weekStart);
-            Map<Integer, Set<String>> sundayScheduled = scheduleService.scheduledSundaySlots();
+            Map<Integer, Set<String>> sundayScheduled = scheduleService.scheduledSundaySlots(weekStart);
 
             Map<Long, Set<Integer>> presentByPerson = new HashMap<>();
             List<WeeklyAttendance> attendances = byTable.getOrDefault(table.getId(), List.of());
