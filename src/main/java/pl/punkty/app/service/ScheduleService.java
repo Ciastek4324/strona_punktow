@@ -61,17 +61,7 @@ public class ScheduleService {
             sunday.put("III MSZA (lektorzy)", List.of());
             return sunday;
         }
-        Map<String, List<String>> sunday = new LinkedHashMap<>();
-        sunday.put("PRYMARIA (aspiranci)", List.of("Rafal Opoka"));
-        sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
-        sunday.put("PRYMARIA (lektorzy)", List.of("Stanislaw Lubecki", "Kacper Florek", "Michal Furtak"));
-        sunday.put("SUMA (aspiranci)", List.of("Wojciech Zelek"));
-        sunday.put("SUMA (ministranci)", List.of("Szymon Zelek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
-        sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
-        sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
-        sunday.put("III MSZA (ministranci)", List.of("Nikodem Franczyk", "Damian Sopata", "Karol Jez", "Pawel Jez"));
-        sunday.put("III MSZA (lektorzy)", List.of("Pawel Wierzycki", "Sebastian Sopata", "Radoslaw Sopata", "Karol Klag"));
-        return sunday;
+        return baseSundayData();
     }
 
     public Map<String, List<String>> weekdayMinistranci(LocalDate date) {
@@ -190,6 +180,20 @@ public class ScheduleService {
         weekdayLektorzy.put("Piatek", List.of("Stanislaw Lubecki", "Jan Migacz"));
         weekdayLektorzy.put("Sobota", List.of("Szymon Mucha", "Jakub Mucha"));
         return weekdayLektorzy;
+    }
+
+    private Map<String, List<String>> baseSundayData() {
+        Map<String, List<String>> sunday = new LinkedHashMap<>();
+        sunday.put("PRYMARIA (aspiranci)", List.of("Rafal Opoka"));
+        sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
+        sunday.put("PRYMARIA (lektorzy)", List.of("Stanislaw Lubecki", "Kacper Florek", "Michal Furtak"));
+        sunday.put("SUMA (aspiranci)", List.of("Wojciech Zelek"));
+        sunday.put("SUMA (ministranci)", List.of("Szymon Zelek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
+        sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
+        sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
+        sunday.put("III MSZA (ministranci)", List.of("Nikodem Franczyk", "Damian Sopata", "Karol Jez", "Pawel Jez"));
+        sunday.put("III MSZA (lektorzy)", List.of("Pawel Wierzycki", "Sebastian Sopata", "Radoslaw Sopata", "Karol Klag"));
+        return sunday;
     }
 
     private int monthOffsetFromBase(LocalDate date) {
@@ -316,7 +320,7 @@ public class ScheduleService {
             slots.put(i + 1, ids);
         }
 
-        Map<String, List<String>> sunday = sundayData(date);
+        Map<String, List<String>> sunday = baseSundayData();
         Map<Integer, List<Long>> sundaySlots = new LinkedHashMap<>();
         sundaySlots.put(71, new ArrayList<>());
         sundaySlots.put(72, new ArrayList<>());
