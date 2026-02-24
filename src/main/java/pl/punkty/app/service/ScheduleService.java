@@ -66,6 +66,34 @@ public class ScheduleService {
         return byDay;
     }
 
+    public Map<Integer, Set<String>> scheduledSundaySlots() {
+        Map<Integer, Set<String>> bySlot = new HashMap<>();
+        bySlot.put(71, new HashSet<>());
+        bySlot.put(72, new HashSet<>());
+        bySlot.put(73, new HashSet<>());
+        for (Map.Entry<String, List<String>> entry : sundayData().entrySet()) {
+            int slot = sundaySlotFromKey(entry.getKey());
+            if (slot == 0) {
+                continue;
+            }
+            bySlot.get(slot).addAll(entry.getValue());
+        }
+        return bySlot;
+    }
+
+    private int sundaySlotFromKey(String key) {
+        if (key.startsWith("PRYMARIA")) {
+            return 71;
+        }
+        if (key.startsWith("SUMA")) {
+            return 72;
+        }
+        if (key.startsWith("III MSZA")) {
+            return 73;
+        }
+        return 0;
+    }
+
     private Map<String, List<String>> baseWeekdayMinistranci() {
         Map<String, List<String>> weekdayMinistranci = new LinkedHashMap<>();
         weekdayMinistranci.put("Poniedzialek", List.of("Nikodem Franczyk", "Krzysztof Florek"));

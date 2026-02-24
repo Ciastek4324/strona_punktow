@@ -61,6 +61,7 @@ public class PointsService {
                 continue;
             }
             Map<Integer, Set<String>> scheduled = scheduleService.scheduledByDay(weekStart);
+            Map<Integer, Set<String>> sundayScheduled = scheduleService.scheduledSundaySlots();
 
             Map<Long, Set<Integer>> presentByPerson = new HashMap<>();
             Map<Long, Integer> otherCounts = new HashMap<>();
@@ -87,6 +88,18 @@ public class PointsService {
                 }
             }
 
+            for (Map.Entry<Integer, Set<String>> entry : sundayScheduled.entrySet()) {
+                int slot = entry.getKey();
+                for (String name : entry.getValue()) {
+                    Long pid = nameToId.get(name);
+                    if (pid == null) {
+                        continue;
+                    }
+                    boolean present = presentByPerson.getOrDefault(pid, Set.of()).contains(slot);
+                    points.put(pid, points.getOrDefault(pid, 0) + (present ? 1 : -5));
+                }
+            }
+
             for (Map.Entry<Long, Set<Integer>> entry : presentByPerson.entrySet()) {
                 Long pid = entry.getKey();
                 String name = idToName.get(pid);
@@ -100,7 +113,10 @@ public class PointsService {
                             points.put(pid, points.getOrDefault(pid, 0) + 3);
                         }
                     } else if (day == 71 || day == 72 || day == 73) {
-                        points.put(pid, points.getOrDefault(pid, 0) + 3);
+                        boolean scheduledForSlot = sundayScheduled.getOrDefault(day, Set.of()).contains(name);
+                        if (!scheduledForSlot) {
+                            points.put(pid, points.getOrDefault(pid, 0) + 3);
+                        }
                     }
                 }
             }
