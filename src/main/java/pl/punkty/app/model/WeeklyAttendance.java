@@ -21,6 +21,9 @@ public class WeeklyAttendance {
     @Column(nullable = false)
     private boolean present;
 
+    @Column(nullable = false)
+    private int otherCount = 0;
+
     public Long getId() {
         return id;
     }
@@ -55,5 +58,13 @@ public class WeeklyAttendance {
 
     public void setPresent(boolean present) {
         this.present = present;
+    }
+
+    public int getOtherCount() {
+        return otherCount;
+    }
+
+    public void setOtherCount(int otherCount) {
+        this.otherCount = otherCount;
     }
 }

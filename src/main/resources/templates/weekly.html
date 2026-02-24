@@ -69,6 +69,7 @@
                 <tr>
                     <th class="sticky">Osoba</th>
                     <th class="sticky" th:each="slot : ${slots}" th:text="${slot.label}">Pon</th>
+                    <th class="sticky">Inne</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -78,6 +79,11 @@
                         <input type="checkbox"
                                th:name="'p_' + ${person.id} + '_' + ${slot.code}"
                                th:checked="${presence[person.id] != null and presence[person.id].contains(slot.code)}" />
+                    </td>
+                    <td>
+                        <input type="number" min="0" max="99"
+                               th:name="'other_' + ${person.id}"
+                               th:value="${otherCounts[person.id] != null ? otherCounts[person.id] : 0}" />
                     </td>
                 </tr>
                 </tbody>

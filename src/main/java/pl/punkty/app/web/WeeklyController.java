@@ -87,14 +87,20 @@ public class WeeklyController {
         }
 
         Map<Long, Set<Integer>> presence = new LinkedHashMap<>();
+        Map<Long, Integer> otherCounts = new LinkedHashMap<>();
         List<WeeklyAttendance> existing = attendanceRepository.findByTableRef(table);
         for (WeeklyAttendance wa : existing) {
-            presence.computeIfAbsent(wa.getPerson().getId(), k -> new HashSet<>())
-                .add(wa.getDayOfWeek());
+            if (wa.getDayOfWeek() == 0) {
+                otherCounts.put(wa.getPerson().getId(), wa.getOtherCount());
+            } else {
+                presence.computeIfAbsent(wa.getPerson().getId(), k -> new HashSet<>())
+                    .add(wa.getDayOfWeek());
+            }
         }
 
         model.addAttribute("people", people);
         model.addAttribute("presence", presence);
+        model.addAttribute("otherCounts", otherCounts);
         model.addAttribute("slots", SLOTS);
         model.addAttribute("weekStart", weekStart);
         model.addAttribute("prevWeek", weekStart.minusWeeks(1));
@@ -117,8 +123,29 @@ public class WeeklyController {
         attendanceRepository.deleteByTableRef(table);
 
         Map<Long, List<Integer>> selected = new LinkedHashMap<>();
+        Map<Long, Integer> otherSelected = new LinkedHashMap<>();
         for (String key : params.keySet()) {
             if (!key.startsWith("p_")) {
+                if (key.startsWith("other_")) {
+                    String[] parts = key.split("_");
+                    if (parts.length != 2) {
+                        continue;
+                    }
+                    Long personId = Long.parseLong(parts[1]);
+                    int value;
+                    try {
+                        value = Integer.parseInt(params.get(key));
+                    } catch (NumberFormatException ex) {
+                        value = 0;
+                    }
+                    if (value < 0) {
+                        value = 0;
+                    }
+                    if (value > 99) {
+                        value = 99;
+                    }
+                    otherSelected.put(personId, value);
+                }
                 continue;
             }
             String[] parts = key.split("_");
@@ -145,8 +172,26 @@ public class WeeklyController {
                 wa.setPerson(person);
                 wa.setDayOfWeek(slotCode);
                 wa.setPresent(true);
+                wa.setOtherCount(0);
                 toSave.add(wa);
             }
+        }
+
+        for (Map.Entry<Long, Integer> entry : otherSelected.entrySet()) {
+            if (entry.getValue() == null || entry.getValue() <= 0) {
+                continue;
+            }
+            Person person = personMap.get(entry.getKey());
+            if (person == null) {
+                continue;
+            }
+            WeeklyAttendance wa = new WeeklyAttendance();
+            wa.setTableRef(table);
+            wa.setPerson(person);
+            wa.setDayOfWeek(0);
+            wa.setPresent(false);
+            wa.setOtherCount(entry.getValue());
+            toSave.add(wa);
         }
         attendanceRepository.saveAll(toSave);
 
