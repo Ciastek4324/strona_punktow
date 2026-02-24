@@ -113,6 +113,7 @@ public class WeeklyController {
     }
 
     @PostMapping("/weekly/save")
+    @Transactional
     public String weeklySave(@RequestParam("weekStart") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
                              @RequestParam Map<String, String> params) {
         WeeklyTable table = tableRepository.findByWeekStart(weekStart)
