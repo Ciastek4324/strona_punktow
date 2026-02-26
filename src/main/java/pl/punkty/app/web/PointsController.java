@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -269,6 +270,19 @@ public class PointsController {
         return "generator";
     }
 
+    @GetMapping("/members")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public String members(Model model) {
+        List<Person> people = peopleService.getPeopleSorted();
+        List<PointsRow> rows = new ArrayList<>();
+        for (Person person : people) {
+            rows.add(new PointsRow(person, person.getBasePoints(), 0, person.getBasePoints()));
+        }
+        model.addAttribute("pointsRows", rows);
+        model.addAttribute("roles", PersonRole.values());
+        return "members";
+    }
+
     @PostMapping("/points/snapshot/create")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String createPointsSnapshot(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -332,9 +346,20 @@ public class PointsController {
                             @RequestParam("role") PersonRole role,
                             @RequestParam("basePoints") int basePoints,
                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-                            @RequestParam(required = false, defaultValue = "points") String tab) {
+                            @RequestParam(required = false, defaultValue = "points") String tab,
+                            RedirectAttributes redirectAttributes) {
         String name = displayName.trim();
-        peopleService.addPerson(name, role, basePoints);
+        PeopleService.AddPersonResult result = peopleService.addPerson(name, role, basePoints);
+        if (result == PeopleService.AddPersonResult.ADDED) {
+            redirectAttributes.addFlashAttribute("notice", "Dodano nowego czlonka.");
+        } else if (result == PeopleService.AddPersonResult.DUPLICATE) {
+            redirectAttributes.addFlashAttribute("error", "Osoba o takim imieniu i nazwisku juz istnieje.");
+        } else {
+            redirectAttributes.addFlashAttribute("error", "Niepoprawne dane czlonka.");
+        }
+        if ("members".equals(tab)) {
+            return "redirect:/members";
+        }
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
@@ -345,8 +370,21 @@ public class PointsController {
                                @RequestParam("role") PersonRole role,
                                @RequestParam("basePoints") int basePoints,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-                               @RequestParam(required = false, defaultValue = "points") String tab) {
-        peopleService.updatePerson(personId, displayName, role, basePoints);
+                               @RequestParam(required = false, defaultValue = "points") String tab,
+                               RedirectAttributes redirectAttributes) {
+        PeopleService.UpdatePersonResult result = peopleService.updatePerson(personId, displayName, role, basePoints);
+        if (result == PeopleService.UpdatePersonResult.UPDATED) {
+            redirectAttributes.addFlashAttribute("notice", "Zapisano zmiany czlonka.");
+        } else if (result == PeopleService.UpdatePersonResult.DUPLICATE) {
+            redirectAttributes.addFlashAttribute("error", "Taka nazwa czlonka juz istnieje.");
+        } else if (result == PeopleService.UpdatePersonResult.NOT_FOUND) {
+            redirectAttributes.addFlashAttribute("error", "Nie znaleziono czlonka.");
+        } else {
+            redirectAttributes.addFlashAttribute("error", "Niepoprawna nazwa czlonka.");
+        }
+        if ("members".equals(tab)) {
+            return "redirect:/members";
+        }
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
@@ -354,8 +392,13 @@ public class PointsController {
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String deletePerson(@RequestParam("personId") Long personId,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-                               @RequestParam(required = false, defaultValue = "points") String tab) {
+                               @RequestParam(required = false, defaultValue = "points") String tab,
+                               RedirectAttributes redirectAttributes) {
         peopleService.deletePerson(personId);
+        redirectAttributes.addFlashAttribute("notice", "Usunieto czlonka.");
+        if ("members".equals(tab)) {
+            return "redirect:/members";
+        }
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 

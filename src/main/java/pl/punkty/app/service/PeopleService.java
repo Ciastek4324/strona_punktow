@@ -5,12 +5,27 @@ import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.repo.PersonRepository;
 
+import java.text.Normalizer;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 public class PeopleService {
+    public enum AddPersonResult {
+        ADDED,
+        DUPLICATE,
+        INVALID
+    }
+
+    public enum UpdatePersonResult {
+        UPDATED,
+        DUPLICATE,
+        NOT_FOUND,
+        INVALID
+    }
+
     private final PersonRepository personRepository;
     private static final Map<String, String> KNOWN_NAME_FIXES = new LinkedHashMap<>();
 
@@ -48,44 +63,49 @@ public class PeopleService {
             .toList();
     }
 
-    public void addPerson(String displayName, PersonRole role, int basePoints) {
+    public AddPersonResult addPerson(String displayName, PersonRole role, int basePoints) {
         String name = sanitizeName(displayName);
         int points = sanitizePoints(basePoints);
         if (name.isEmpty()) {
-            return;
+            return AddPersonResult.INVALID;
         }
-        if (personRepository.findByDisplayNameIgnoreCase(name).isPresent()) {
-            return;
+        if (existsByNormalizedName(name, null)) {
+            return AddPersonResult.DUPLICATE;
         }
         Person person = new Person();
         person.setDisplayName(name);
         person.setRole(role);
         person.setBasePoints(points);
         personRepository.save(person);
+        return AddPersonResult.ADDED;
     }
 
     public void updatePerson(Long id, PersonRole role, int basePoints) {
         updatePerson(id, null, role, basePoints);
     }
 
-    public void updatePerson(Long id, String displayName, PersonRole role, int basePoints) {
+    public UpdatePersonResult updatePerson(Long id, String displayName, PersonRole role, int basePoints) {
         int points = sanitizePoints(basePoints);
-        personRepository.findById(id).ifPresent(person -> {
-            if (displayName != null) {
-                String name = sanitizeName(displayName);
-                if (!name.isBlank()) {
-                    boolean usedByOther = personRepository.findByDisplayNameIgnoreCase(name)
-                        .map(existing -> !existing.getId().equals(id))
-                        .orElse(false);
-                    if (!usedByOther) {
-                        person.setDisplayName(name);
-                    }
-                }
+        Person person = personRepository.findById(id).orElse(null);
+        if (person == null) {
+            return UpdatePersonResult.NOT_FOUND;
+        }
+
+        if (displayName != null) {
+            String name = sanitizeName(displayName);
+            if (name.isBlank()) {
+                return UpdatePersonResult.INVALID;
             }
-            person.setRole(role);
-            person.setBasePoints(points);
-            personRepository.save(person);
-        });
+            if (existsByNormalizedName(name, id)) {
+                return UpdatePersonResult.DUPLICATE;
+            }
+            person.setDisplayName(name);
+        }
+
+        person.setRole(role);
+        person.setBasePoints(points);
+        personRepository.save(person);
+        return UpdatePersonResult.UPDATED;
     }
 
     public void updateRole(Long id, PersonRole role) {
@@ -133,5 +153,29 @@ public class PeopleService {
             name = name.substring(0, 100);
         }
         return name;
+    }
+
+    private boolean existsByNormalizedName(String candidate, Long ignoreId) {
+        String candidateKey = normalizeNameKey(candidate);
+        for (Person person : personRepository.findAll()) {
+            if (ignoreId != null && ignoreId.equals(person.getId())) {
+                continue;
+            }
+            if (normalizeNameKey(person.getDisplayName()).equals(candidateKey)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeNameKey(String value) {
+        if (value == null) {
+            return "";
+        }
+        String cleaned = value.trim().toLowerCase(Locale.ROOT);
+        return Normalizer.normalize(cleaned, Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+", "")
+            .replaceAll("\\s+", " ")
+            .trim();
     }
 }
