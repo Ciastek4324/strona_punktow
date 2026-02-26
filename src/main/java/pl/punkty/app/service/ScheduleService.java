@@ -263,41 +263,35 @@ public class ScheduleService {
             return sundayRoleSlotCode(mass, ROLE_LEKTOR);
         }
         return 0;
-    }
-
-    private Map<String, List<String>> baseWeekdayMinistranci() {
+    }    private Map<String, List<String>> baseWeekdayMinistranci() {
         Map<String, List<String>> weekdayMinistranci = new LinkedHashMap<>();
-        weekdayMinistranci.put("Poniedzialek", List.of("Nikodem FrÄ…czyk", "Krzysztof Florek"));
+        weekdayMinistranci.put("Poniedzialek", List.of("Nikodem Fr\u0105czyk", "Krzysztof Florek"));
         weekdayMinistranci.put("Wtorek", List.of("Tomasz Gancarczyk", "Marcin Opoka"));
-        weekdayMinistranci.put("Sroda", List.of("Damian Sopata", "Karol JeĹĽ", "PaweĹ‚ JeĹĽ"));
-        weekdayMinistranci.put("Czwartek", List.of("Szymon Ĺ»elek", "Antoni Gorcowski"));
+        weekdayMinistranci.put("Sroda", List.of("Damian Sopata", "Karol Je\u017c", "Pawe\u0142 Je\u017c"));
+        weekdayMinistranci.put("Czwartek", List.of("Szymon \u017belek", "Antoni Gorcowski"));
         weekdayMinistranci.put("Piatek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
         weekdayMinistranci.put("Sobota", List.of("Filip Wierzycki", "Wiktor Wierzycki", "Marcel Smoter"));
         return weekdayMinistranci;
-    }
-
-    private Map<String, List<String>> baseWeekdayLektorzy() {
+    }    private Map<String, List<String>> baseWeekdayLektorzy() {
         Map<String, List<String>> weekdayLektorzy = new LinkedHashMap<>();
         weekdayLektorzy.put("Poniedzialek", List.of("Kacper Florek", "Karol Klag"));
-        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "RadosĹ‚aw Sopata"));
-        weekdayLektorzy.put("Sroda", List.of("PaweĹ‚ Wierzycki", "Daniel Nowak"));
-        weekdayLektorzy.put("Czwartek", List.of("MichaĹ‚ Furtak"));
-        weekdayLektorzy.put("Piatek", List.of("StanisĹ‚aw Lubecki", "Jan Migacz"));
+        weekdayLektorzy.put("Wtorek", List.of("Sebastian Sopata", "Rados\u0142aw Sopata"));
+        weekdayLektorzy.put("Sroda", List.of("Pawe\u0142 Wierzycki", "Daniel Nowak"));
+        weekdayLektorzy.put("Czwartek", List.of("Micha\u0142 Furtak"));
+        weekdayLektorzy.put("Piatek", List.of("Stanis\u0142aw Lubecki", "Jan Migacz"));
         weekdayLektorzy.put("Sobota", List.of("Szymon Mucha", "Jakub Mucha"));
         return weekdayLektorzy;
-    }
-
-    private Map<String, List<String>> baseSundayData() {
+    }    private Map<String, List<String>> baseSundayData() {
         Map<String, List<String>> sunday = new LinkedHashMap<>();
-        sunday.put("PRYMARIA (aspiranci)", List.of("RafaĹ‚ Opoka"));
+        sunday.put("PRYMARIA (aspiranci)", List.of("Rafa\u0142 Opoka"));
         sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
-        sunday.put("PRYMARIA (lektorzy)", List.of("StanisĹ‚aw Lubecki", "Kacper Florek", "MichaĹ‚ Furtak"));
-        sunday.put("SUMA (aspiranci)", List.of("Wojciech Ĺ»elek"));
-        sunday.put("SUMA (ministranci)", List.of("Szymon Ĺ»elek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
+        sunday.put("PRYMARIA (lektorzy)", List.of("Stanis\u0142aw Lubecki", "Kacper Florek", "Micha\u0142 Furtak"));
+        sunday.put("SUMA (aspiranci)", List.of("Wojciech \u017belek"));
+        sunday.put("SUMA (ministranci)", List.of("Szymon \u017belek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
         sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
         sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
-        sunday.put("III MSZA (ministranci)", List.of("Nikodem FrÄ…czyk", "Damian Sopata", "Karol JeĹĽ", "PaweĹ‚ JeĹĽ"));
-        sunday.put("III MSZA (lektorzy)", List.of("PaweĹ‚ Wierzycki", "Sebastian Sopata", "RadosĹ‚aw Sopata", "Karol Klag"));
+        sunday.put("III MSZA (ministranci)", List.of("Nikodem Fr\u0105czyk", "Damian Sopata", "Karol Je\u017c", "Pawe\u0142 Je\u017c"));
+        sunday.put("III MSZA (lektorzy)", List.of("Pawe\u0142 Wierzycki", "Sebastian Sopata", "Rados\u0142aw Sopata", "Karol Klag"));
         return sunday;
     }
 
@@ -584,9 +578,7 @@ public class ScheduleService {
         sunday.put(massLabel + " (aspiranci)", aspirants);
         sunday.put(massLabel + " (ministranci)", ministrants);
         sunday.put(massLabel + " (lektorzy)", lectors);
-    }
-
-    private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {
+    }    private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {
         Map<String, Long> normalized = new HashMap<>();
         for (Map.Entry<String, Long> entry : nameToId.entrySet()) {
             normalized.put(normalizeNameKey(entry.getKey()), entry.getValue());
@@ -609,11 +601,8 @@ public class ScheduleService {
         String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
             .replaceAll("\\p{M}+", "")
             .toLowerCase(Locale.ROOT)
-            .replace('ł', 'l')
-            .replace('Ł', 'l');
+            .replace('\u0142', 'l')
+            .replace('\u0141', 'l');
         return normalized.replaceAll("\\s+", " ").trim();
     }
 }
-
-
-

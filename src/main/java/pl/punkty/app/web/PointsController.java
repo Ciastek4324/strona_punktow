@@ -41,6 +41,7 @@ import pl.punkty.app.service.ScheduleService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -686,13 +687,11 @@ public class PointsController {
             }
         }
         return null;
-    }
-
-    private String withPolishDay(String day) {
+    }    private String withPolishDay(String day) {
         return switch (day) {
-            case "Poniedzialek" -> "Poniedziałek";
-            case "Sroda" -> "Środa";
-            case "Piatek" -> "Piątek";
+            case "Poniedzialek" -> "Poniedzia\u0142ek";
+            case "Sroda" -> "\u015aroda";
+            case "Piatek" -> "Pi\u0105tek";
             default -> day;
         };
     }
@@ -828,9 +827,7 @@ public class PointsController {
             last = m.group(1);
         }
         return last;
-    }
-
-    private String stripTags(String xml) {
+    }    private String stripTags(String xml) {
         String text = xml.replaceAll("<[^>]+>", "");
         return text.replace("&lt;", "<")
             .replace("&gt;", ">")
@@ -858,30 +855,40 @@ public class PointsController {
         if (text == null) {
             return "";
         }
-        return text
-            .replace("Ä…", "ą")
-            .replace("Ä‡", "ć")
-            .replace("Ä™", "ę")
-            .replace("Äł", "ł")
-            .replace("Ĺ‚", "ł")
-            .replace("Ĺ„", "ń")
-            .replace("Ăł", "ó")
-            .replace("Ĺ›", "ś")
-            .replace("Ĺş", "ź")
-            .replace("Ĺź", "ź")
-            .replace("Ĺ¼", "ż")
-            .replace("Å»", "Ż")
-            .replace("Åš", "Ś")
-            .replace("Åš", "Ś")
-            .replace("â€“", "-")
-            .replace("â€”", "-")
-            .replace("â€ž", "\"")
-            .replace("â€ť", "\"")
-            .replace("â€ś", "\"")
-            .replace("â€", "\"")
-            .replace("â€¦", "...")
-            .replace("Ă„â€¦", "ą")
-            .replace("FrĂ„â€¦czyk", "Frączyk");
+        String fixed = text;
+        fixed = decodeMojibake(fixed, Charset.forName("windows-1250"));
+        fixed = decodeMojibake(fixed, StandardCharsets.ISO_8859_1);
+        return fixed;
+    }
+
+    private String decodeMojibake(String text, Charset source) {
+        if (!looksMojibake(text)) {
+            return text;
+        }
+        String decoded = new String(text.getBytes(source), StandardCharsets.UTF_8);
+        return quality(decoded) >= quality(text) ? decoded : text;
+    }
+
+    private boolean looksMojibake(String value) {
+        return value.contains("Ã") || value.contains("Ä") || value.contains("Å")
+            || value.contains("Ĺ") || value.contains("Ă") || value.contains("â")
+            || value.contains("Â") || value.contains("�");
+    }
+
+    private int quality(String value) {
+        int score = 0;
+        for (char c : value.toCharArray()) {
+            if ("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ".indexOf(c) >= 0) {
+                score += 3;
+            }
+            if (Character.isLetterOrDigit(c) || Character.isWhitespace(c) || ",.-():".indexOf(c) >= 0) {
+                score += 1;
+            }
+        }
+        if (looksMojibake(value)) {
+            score -= 10;
+        }
+        return score;
     }
 
     private boolean containsNamesInOrder(String plain, List<String> names) {
@@ -895,7 +902,6 @@ public class PointsController {
         }
         return true;
     }
-
     private String escapeXml(String text) {
         return text.replace("&", "&amp;")
             .replace("<", "&lt;")

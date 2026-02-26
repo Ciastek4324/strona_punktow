@@ -5,6 +5,8 @@ import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.repo.PersonRepository;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -145,7 +147,7 @@ public class PeopleService {
         if (value == null) {
             return "";
         }
-        String name = value.trim();
+        String name = repairMojibake(value.trim());
         for (Map.Entry<String, String> entry : KNOWN_NAME_FIXES.entrySet()) {
             name = name.replace(entry.getKey(), entry.getValue());
         }
@@ -153,6 +155,43 @@ public class PeopleService {
             name = name.substring(0, 100);
         }
         return name;
+    }
+
+    private String repairMojibake(String text) {
+        String fixed = text;
+        fixed = decodeIfBroken(fixed, Charset.forName("windows-1250"));
+        fixed = decodeIfBroken(fixed, StandardCharsets.ISO_8859_1);
+        return fixed;
+    }
+
+    private String decodeIfBroken(String text, Charset source) {
+        if (!looksBroken(text)) {
+            return text;
+        }
+        String decoded = new String(text.getBytes(source), StandardCharsets.UTF_8);
+        return quality(decoded) >= quality(text) ? decoded : text;
+    }
+
+    private boolean looksBroken(String value) {
+        return value.contains("Ã") || value.contains("Ä") || value.contains("Å")
+            || value.contains("Ĺ") || value.contains("Ă") || value.contains("â")
+            || value.contains("Â") || value.contains("�");
+    }
+
+    private int quality(String value) {
+        int score = 0;
+        for (char c : value.toCharArray()) {
+            if ("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ".indexOf(c) >= 0) {
+                score += 3;
+            }
+            if (Character.isLetterOrDigit(c) || Character.isWhitespace(c) || ".,-():".indexOf(c) >= 0) {
+                score += 1;
+            }
+        }
+        if (looksBroken(value)) {
+            score -= 10;
+        }
+        return score;
     }
 
     private boolean existsByNormalizedName(String candidate, Long ignoreId) {
