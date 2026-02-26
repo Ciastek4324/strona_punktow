@@ -453,33 +453,58 @@ public class PointsController {
                               HttpServletResponse response) throws IOException {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         String monthName = monthName(effectiveDate);
-        String dateStr = formatDate(effectiveDate);
+        Map<String, List<String>> sunday = scheduleService.sundayData(effectiveDate);
+        Map<String, List<String>> weekdayMinistranci = scheduleService.weekdayMinistranci(effectiveDate);
+        Map<String, List<String>> weekdayLektorzy = scheduleService.weekdayLektorzy(effectiveDate);
+        Map<String, List<String>> weekdayAspiranci = scheduleService.weekdayAspiranci(effectiveDate);
 
         response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
         response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docm\"");
 
-        try (InputStream in = getClass().getResourceAsStream("/templates/lista-template.docm")) {
-            if (in == null) {
-                throw new IOException("Template not found");
+        try (XWPFDocument doc = new XWPFDocument(); OutputStream out = response.getOutputStream()) {
+            XWPFParagraph title = doc.createParagraph();
+            XWPFRun titleRun = title.createRun();
+            titleRun.setText("MSZE NIEDZIELNE - " + monthName + " (od " + formatDate(effectiveDate) + ")");
+            titleRun.setBold(true);
+            titleRun.setFontFamily("Dosis");
+            titleRun.setFontSize(14);
+
+            for (Map.Entry<String, List<String>> entry : sunday.entrySet()) {
+                XWPFParagraph p = doc.createParagraph();
+                XWPFRun run = p.createRun();
+                run.setFontFamily("Dosis");
+                run.setFontSize(11);
+                run.setText(entry.getKey() + ": " + String.join(", ", entry.getValue()));
             }
-            try (ZipInputStream zin = new ZipInputStream(in);
-                 OutputStream out = response.getOutputStream();
-                 ZipOutputStream zout = new ZipOutputStream(out)) {
-                ZipEntry entry;
-                while ((entry = zin.getNextEntry()) != null) {
-                    ZipEntry outEntry = new ZipEntry(entry.getName());
-                    zout.putNextEntry(outEntry);
-                    byte[] data = zin.readAllBytes();
-                    if ("word/document.xml".equals(entry.getName())) {
-                        String xml = new String(data, java.nio.charset.StandardCharsets.UTF_8);
-                        xml = xml.replace("09.02.2026", dateStr);
-                        xml = replaceMonthInXml(xml, monthName);
-                        data = xml.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                    }
-                    zout.write(data);
-                    zout.closeEntry();
-                }
-            }
+
+            XWPFParagraph wdHeader = doc.createParagraph();
+            XWPFRun wdRun = wdHeader.createRun();
+            wdRun.setText("DNI POWSZEDNIE");
+            wdRun.setBold(true);
+            wdRun.setFontFamily("Dosis");
+            wdRun.setFontSize(13);
+
+            addWeekSection(doc, "MINISTRANCI", weekdayMinistranci);
+            addWeekSection(doc, "LEKTORZY", weekdayLektorzy);
+            addWeekSection(doc, "ASPIRANCI", weekdayAspiranci);
+
+            doc.write(out);
+        }
+    }
+
+    private void addWeekSection(XWPFDocument doc, String label, Map<String, List<String>> data) {
+        XWPFParagraph section = doc.createParagraph();
+        XWPFRun sr = section.createRun();
+        sr.setText(label + ":");
+        sr.setBold(true);
+        sr.setFontFamily("Dosis");
+        sr.setFontSize(12);
+        for (String day : WEEK_DAYS) {
+            XWPFParagraph p = doc.createParagraph();
+            XWPFRun run = p.createRun();
+            run.setFontFamily("Dosis");
+            run.setFontSize(11);
+            run.setText(day + " - " + String.join(", ", data.getOrDefault(day, List.of())));
         }
     }
 
