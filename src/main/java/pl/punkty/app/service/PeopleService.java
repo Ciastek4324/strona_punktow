@@ -65,8 +65,23 @@ public class PeopleService {
     }
 
     public void updatePerson(Long id, PersonRole role, int basePoints) {
+        updatePerson(id, null, role, basePoints);
+    }
+
+    public void updatePerson(Long id, String displayName, PersonRole role, int basePoints) {
         int points = sanitizePoints(basePoints);
         personRepository.findById(id).ifPresent(person -> {
+            if (displayName != null) {
+                String name = sanitizeName(displayName);
+                if (!name.isBlank()) {
+                    boolean usedByOther = personRepository.findByDisplayNameIgnoreCase(name)
+                        .map(existing -> !existing.getId().equals(id))
+                        .orElse(false);
+                    if (!usedByOther) {
+                        person.setDisplayName(name);
+                    }
+                }
+            }
             person.setRole(role);
             person.setBasePoints(points);
             personRepository.save(person);

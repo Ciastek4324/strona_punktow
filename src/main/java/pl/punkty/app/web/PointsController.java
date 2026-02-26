@@ -341,11 +341,12 @@ public class PointsController {
     @PostMapping("/people/update")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String updatePerson(@RequestParam("personId") Long personId,
+                               @RequestParam("displayName") String displayName,
                                @RequestParam("role") PersonRole role,
                                @RequestParam("basePoints") int basePoints,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                @RequestParam(required = false, defaultValue = "points") String tab) {
-        peopleService.updatePerson(personId, role, basePoints);
+        peopleService.updatePerson(personId, displayName, role, basePoints);
         return "redirect:/generator?tab=" + tab + (date != null ? "&date=" + date : "");
     }
 
@@ -556,8 +557,9 @@ public class PointsController {
 
             String sundayLabel = detectSundayLabel(normalized);
             if (sundayLabel != null) {
-                String line = sundayLabel + ": " + joinNames(sunday.getOrDefault(sundayLabel, List.of()));
-                String replaced = rebuildParagraphWithSingleRun(para, line);
+                String label = sundayLabel + ": ";
+                String value = joinNames(sunday.getOrDefault(sundayLabel, List.of()));
+                String replaced = rebuildParagraphWithTwoRuns(para, label, value);
                 m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
                 skipNextSundayContinuation = true;
                 continue;
@@ -587,8 +589,9 @@ public class PointsController {
                     case "ASPIRANCI" -> weekdayAspiranci;
                     default -> Map.of();
                 };
-                String line = day + " - " + joinNames(source.getOrDefault(day, List.of()));
-                String replaced = rebuildParagraphWithSingleRun(para, line);
+                String label = day + " - ";
+                String value = joinNames(source.getOrDefault(day, List.of()));
+                String replaced = rebuildParagraphWithTwoRuns(para, label, value);
                 m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
                 continue;
             }
@@ -678,6 +681,37 @@ public class PointsController {
         return rebuilt.toString();
     }
 
+    private String rebuildParagraphWithTwoRuns(String paragraph, String labelText, String valueText) {
+        String startTag = extractStartTag(paragraph);
+        String pPr = extractPPr(paragraph);
+        String firstRPr = extractFirstRunPr(paragraph);
+        String lastRPr = extractLastRunPr(paragraph);
+        if (lastRPr == null) {
+            lastRPr = firstRPr;
+        }
+
+        StringBuilder rebuilt = new StringBuilder();
+        rebuilt.append(startTag);
+        if (pPr != null) {
+            rebuilt.append(pPr);
+        }
+        rebuilt.append("<w:r>");
+        if (firstRPr != null) {
+            rebuilt.append(firstRPr);
+        }
+        rebuilt.append("<w:t xml:space=\"preserve\">")
+            .append(escapeXml(fixTextArtifacts(labelText)))
+            .append("</w:t></w:r>");
+        rebuilt.append("<w:r>");
+        if (lastRPr != null) {
+            rebuilt.append(lastRPr);
+        }
+        rebuilt.append("<w:t xml:space=\"preserve\">")
+            .append(escapeXml(fixTextArtifacts(valueText)))
+            .append("</w:t></w:r></w:p>");
+        return rebuilt.toString();
+    }
+
     private String replaceMonthInXml(String xml, String monthName) {
         for (String month : monthNames()) {
             if (xml.contains(">" + month + "<")) {
@@ -742,6 +776,15 @@ public class PointsController {
     private String extractFirstRunPr(String paragraph) {
         Matcher m = Pattern.compile("(?s)<w:r>\\s*(<w:rPr>.*?</w:rPr>)").matcher(paragraph);
         return m.find() ? m.group(1) : null;
+    }
+
+    private String extractLastRunPr(String paragraph) {
+        Matcher m = Pattern.compile("(?s)<w:r>\\s*(<w:rPr>.*?</w:rPr>)").matcher(paragraph);
+        String last = null;
+        while (m.find()) {
+            last = m.group(1);
+        }
+        return last;
     }
 
     private String stripTags(String xml) {
