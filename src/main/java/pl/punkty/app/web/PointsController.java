@@ -417,9 +417,9 @@ public class PointsController {
             pointsRows.add(new PointsRow(person, base, month, base + month));
         }
 
-        response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
+        response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         response.setHeader("Content-Disposition", "attachment; filename=\"punkty-" +
-            effectiveDate.getYear() + "-" + String.format("%02d", effectiveDate.getMonthValue()) + ".docm\"");
+            effectiveDate.getYear() + "-" + String.format("%02d", effectiveDate.getMonthValue()) + ".docx\"");
 
         try (XWPFDocument doc = new XWPFDocument(); OutputStream out = response.getOutputStream()) {
             XWPFParagraph title = doc.createParagraph();
@@ -458,8 +458,8 @@ public class PointsController {
         Map<String, List<String>> weekdayLektorzy = scheduleService.weekdayLektorzy(effectiveDate);
         Map<String, List<String>> weekdayAspiranci = scheduleService.weekdayAspiranci(effectiveDate);
 
-        response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
-        response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docm\"");
+        response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docx\"");
 
         try (XWPFDocument doc = new XWPFDocument(); OutputStream out = response.getOutputStream()) {
             XWPFParagraph title = doc.createParagraph();
