@@ -5,11 +5,38 @@ import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.repo.PersonRepository;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PeopleService {
     private final PersonRepository personRepository;
+    private static final Map<String, String> KNOWN_NAME_FIXES = new LinkedHashMap<>();
+
+    static {
+        KNOWN_NAME_FIXES.put("Rafal Opoka", "Rafa\u0142 Opoka");
+        KNOWN_NAME_FIXES.put("Karol Jez", "Karol Je\u017c");
+        KNOWN_NAME_FIXES.put("Pawel Jez", "Pawe\u0142 Je\u017c");
+        KNOWN_NAME_FIXES.put("Pawel Wierzycki", "Pawe\u0142 Wierzycki");
+        KNOWN_NAME_FIXES.put("Nikodem Franczyk", "Nikodem Fr\u0105czyk");
+        KNOWN_NAME_FIXES.put("Radoslaw Sopata", "Rados\u0142aw Sopata");
+        KNOWN_NAME_FIXES.put("Stanislaw Lubecki", "Stanis\u0142aw Lubecki");
+        KNOWN_NAME_FIXES.put("Michal Furtak", "Micha\u0142 Furtak");
+        KNOWN_NAME_FIXES.put("Michal Opoka", "Micha\u0142 Opoka");
+        KNOWN_NAME_FIXES.put("Wojciech Zelek", "Wojciech \u017belek");
+        KNOWN_NAME_FIXES.put("Szymon Zelek", "Szymon \u017belek");
+
+        KNOWN_NAME_FIXES.put("FrĂ„â€¦czyk", "Fr\u0105czyk");
+        KNOWN_NAME_FIXES.put("JeĂ„Ä…Ă„Ëť", "Je\u017c");
+        KNOWN_NAME_FIXES.put("PaweÄaâ€š", "Pawe\u0142");
+        KNOWN_NAME_FIXES.put("MichaÄaâ€š", "Micha\u0142");
+        KNOWN_NAME_FIXES.put("RadosÄaâ€šaw", "Rados\u0142aw");
+        KNOWN_NAME_FIXES.put("RafaÄaâ€š", "Rafa\u0142");
+        KNOWN_NAME_FIXES.put("StanisÄaâ€šaw", "Stanis\u0142aw");
+        KNOWN_NAME_FIXES.put("Karol JeÄaÄ˝", "Karol Je\u017c");
+        KNOWN_NAME_FIXES.put("Nikodem FrĂ„â€¦czyk", "Nikodem Fr\u0105czyk");
+    }
 
     public PeopleService(PersonRepository personRepository) {
         this.personRepository = personRepository;
@@ -83,50 +110,13 @@ public class PeopleService {
         if (value == null) {
             return "";
         }
-        String name = toAscii(fixMojibake(value.trim()));
+        String name = value.trim();
+        for (Map.Entry<String, String> entry : KNOWN_NAME_FIXES.entrySet()) {
+            name = name.replace(entry.getKey(), entry.getValue());
+        }
         if (name.length() > 100) {
             name = name.substring(0, 100);
         }
         return name;
-    }
-
-    private String fixMojibake(String input) {
-        String out = input
-            .replace("\u00c4\u2026", "a")  // Ä…
-            .replace("\u00c4\u2021", "c")  // Ä‡ 
-            .replace("\u00c4\u2122", "e")  // Ä™
-            .replace("\u00c5\u201a", "l")  // Å‚
-            .replace("\u00c5\u201e", "n")  // Å„
-            .replace("\u00c3\u00b3", "o")  // Ã³
-            .replace("\u00c5\u203a", "s")  // Å›
-            .replace("\u00c5\u00bc", "z")  // Å¼
-            .replace("\u00c5\u00ba", "z")  // Åº
-            .replace("\u00c4\u201e", "A")  // Ä„
-            .replace("\u00c4\u2020", "C")  // Ä†
-            .replace("\u00c4\u02dc", "E")  // Ä˜
-            .replace("\u00c5\u0081", "L")  // Å
-            .replace("\u00c5\u0083", "N")  // Åƒ
-            .replace("\u00c3\u201c", "O")  // Ã“
-            .replace("\u00c5\u009a", "S")  // Åš
-            .replace("\u00c5\u00bb", "Z")  // Å»
-            .replace("\u00c5\u00b9", "Z")  // Å¹
-            .replace("\u00c4\u0061\u00e2\u20ac\u0161", "l") // Äaâ€š
-            .replace("\u00c4\u0061\u00c4\u02dd", "z") // ÄaÄ˝
-            .replace("\u00c4\u2026\u00c4\u02dd", "z") // Ä…Ä˝
-            .replace("\u00c4\u0061\u00c4\u02da", "z") // ÄaÄŠ
-            .replace("\u00c4\u0192\u00e2\u20ac\u00a6", "a") // Ă„â€¦
-            .replace("\u00c4\u201a\u00e2\u20ac\u00a6", "a") // Ä‚â€¦
-            .replace("\u00c5\u00b8", "z"); // Å¸
-        return out;
-    }
-
-    private String toAscii(String input) {
-        return input
-            .replace("\u0105", "a").replace("\u0107", "c").replace("\u0119", "e")
-            .replace("\u0142", "l").replace("\u0144", "n").replace("\u00f3", "o")
-            .replace("\u015b", "s").replace("\u017c", "z").replace("\u017a", "z")
-            .replace("\u0104", "A").replace("\u0106", "C").replace("\u0118", "E")
-            .replace("\u0141", "L").replace("\u0143", "N").replace("\u00d3", "O")
-            .replace("\u015a", "S").replace("\u017b", "Z").replace("\u0179", "Z");
     }
 }
