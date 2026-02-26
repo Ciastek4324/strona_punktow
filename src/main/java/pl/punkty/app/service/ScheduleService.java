@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import pl.punkty.app.model.MonthlySchedule;
 import pl.punkty.app.model.MonthlyScheduleEntry;
 import pl.punkty.app.model.Person;
+import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.repo.MonthlyScheduleEntryRepository;
 import pl.punkty.app.repo.MonthlyScheduleRepository;
 import pl.punkty.app.repo.PersonRepository;
@@ -28,6 +29,9 @@ public class ScheduleService {
     private static final int ROLE_ASPIRANT = 1;
     private static final int ROLE_MINISTRANT = 2;
     private static final int ROLE_LEKTOR = 3;
+    private static final int SUNDAY_R = 71;
+    private static final int SUNDAY_S = 72;
+    private static final int SUNDAY_P = 73;
 
     public ScheduleService(MonthlyScheduleRepository scheduleRepository,
                            MonthlyScheduleEntryRepository entryRepository,
@@ -54,15 +58,19 @@ public class ScheduleService {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
             Map<String, List<String>> sunday = new LinkedHashMap<>();
-            sunday.put("PRYMARIA (aspiranci)", List.of());
-            sunday.put("PRYMARIA (ministranci)", slots.getOrDefault(71, List.of()));
-            sunday.put("PRYMARIA (lektorzy)", List.of());
-            sunday.put("SUMA (aspiranci)", List.of());
-            sunday.put("SUMA (ministranci)", slots.getOrDefault(72, List.of()));
-            sunday.put("SUMA (lektorzy)", List.of());
-            sunday.put("III MSZA (aspiranci)", List.of());
-            sunday.put("III MSZA (ministranci)", slots.getOrDefault(73, List.of()));
-            sunday.put("III MSZA (lektorzy)", List.of());
+            if (hasSundayRoleSlots(slots)) {
+                sunday.put("PRYMARIA (aspiranci)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_R, ROLE_ASPIRANT), List.of()));
+                sunday.put("PRYMARIA (ministranci)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_R, ROLE_MINISTRANT), List.of()));
+                sunday.put("PRYMARIA (lektorzy)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_R, ROLE_LEKTOR), List.of()));
+                sunday.put("SUMA (aspiranci)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_S, ROLE_ASPIRANT), List.of()));
+                sunday.put("SUMA (ministranci)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_S, ROLE_MINISTRANT), List.of()));
+                sunday.put("SUMA (lektorzy)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_S, ROLE_LEKTOR), List.of()));
+                sunday.put("III MSZA (aspiranci)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_P, ROLE_ASPIRANT), List.of()));
+                sunday.put("III MSZA (ministranci)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_P, ROLE_MINISTRANT), List.of()));
+                sunday.put("III MSZA (lektorzy)", slots.getOrDefault(sundayRoleSlotCode(SUNDAY_P, ROLE_LEKTOR), List.of()));
+            } else {
+                fillLegacySundayFromCombinedSlots(sunday, slots);
+            }
             return sunday;
         }
         return baseSundayData();
@@ -185,16 +193,31 @@ public class ScheduleService {
         Map<Integer, List<String>> slots = loadScheduleSlots(date);
         if (!slots.isEmpty()) {
             Map<Integer, Set<String>> bySlot = new HashMap<>();
-            bySlot.put(71, new HashSet<>(slots.getOrDefault(71, List.of())));
-            bySlot.put(72, new HashSet<>(slots.getOrDefault(72, List.of())));
-            bySlot.put(73, new HashSet<>(slots.getOrDefault(73, List.of())));
+            if (hasSundayRoleSlots(slots)) {
+                bySlot.put(SUNDAY_R, new HashSet<>());
+                bySlot.put(SUNDAY_S, new HashSet<>());
+                bySlot.put(SUNDAY_P, new HashSet<>());
+                bySlot.get(SUNDAY_R).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_R, ROLE_ASPIRANT), List.of()));
+                bySlot.get(SUNDAY_R).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_R, ROLE_MINISTRANT), List.of()));
+                bySlot.get(SUNDAY_R).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_R, ROLE_LEKTOR), List.of()));
+                bySlot.get(SUNDAY_S).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_S, ROLE_ASPIRANT), List.of()));
+                bySlot.get(SUNDAY_S).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_S, ROLE_MINISTRANT), List.of()));
+                bySlot.get(SUNDAY_S).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_S, ROLE_LEKTOR), List.of()));
+                bySlot.get(SUNDAY_P).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_P, ROLE_ASPIRANT), List.of()));
+                bySlot.get(SUNDAY_P).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_P, ROLE_MINISTRANT), List.of()));
+                bySlot.get(SUNDAY_P).addAll(slots.getOrDefault(sundayRoleSlotCode(SUNDAY_P, ROLE_LEKTOR), List.of()));
+            } else {
+                bySlot.put(SUNDAY_R, new HashSet<>(slots.getOrDefault(SUNDAY_R, List.of())));
+                bySlot.put(SUNDAY_S, new HashSet<>(slots.getOrDefault(SUNDAY_S, List.of())));
+                bySlot.put(SUNDAY_P, new HashSet<>(slots.getOrDefault(SUNDAY_P, List.of())));
+            }
             return bySlot;
         }
 
         Map<Integer, Set<String>> bySlot = new HashMap<>();
-        bySlot.put(71, new HashSet<>());
-        bySlot.put(72, new HashSet<>());
-        bySlot.put(73, new HashSet<>());
+        bySlot.put(SUNDAY_R, new HashSet<>());
+        bySlot.put(SUNDAY_S, new HashSet<>());
+        bySlot.put(SUNDAY_P, new HashSet<>());
         for (Map.Entry<String, List<String>> entry : sundayData(date).entrySet()) {
             int slot = sundaySlotFromKey(entry.getKey());
             if (slot == 0) {
@@ -207,13 +230,30 @@ public class ScheduleService {
 
     private int sundaySlotFromKey(String key) {
         if (key.startsWith("PRYMARIA")) {
-            return 71;
+            return SUNDAY_R;
         }
         if (key.startsWith("SUMA")) {
-            return 72;
+            return SUNDAY_S;
         }
         if (key.startsWith("III MSZA")) {
-            return 73;
+            return SUNDAY_P;
+        }
+        return 0;
+    }
+
+    private int sundayRoleSlotFromKey(String key) {
+        int mass = sundaySlotFromKey(key);
+        if (mass == 0) {
+            return 0;
+        }
+        if (key.contains("(aspiranci)")) {
+            return sundayRoleSlotCode(mass, ROLE_ASPIRANT);
+        }
+        if (key.contains("(ministranci)")) {
+            return sundayRoleSlotCode(mass, ROLE_MINISTRANT);
+        }
+        if (key.contains("(lektorzy)")) {
+            return sundayRoleSlotCode(mass, ROLE_LEKTOR);
         }
         return 0;
     }
@@ -292,7 +332,8 @@ public class ScheduleService {
         List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(schedule);
         Map<Integer, List<String>> slots = new HashMap<>();
         for (MonthlyScheduleEntry entry : entries) {
-            slots.computeIfAbsent(entry.getSlotCode(), k -> new ArrayList<>())
+            int slotCode = normalizeReadSlotCode(entry);
+            slots.computeIfAbsent(slotCode, k -> new ArrayList<>())
                 .add(entry.getPerson().getDisplayName());
         }
         return slots;
@@ -303,7 +344,8 @@ public class ScheduleService {
         List<MonthlyScheduleEntry> entries = entryRepository.findAllByScheduleOrderBySlotCodeAscPositionAsc(schedule);
         Map<Integer, List<Long>> slots = new HashMap<>();
         for (MonthlyScheduleEntry entry : entries) {
-            slots.computeIfAbsent(entry.getSlotCode(), k -> new ArrayList<>())
+            int slotCode = normalizeReadSlotCode(entry);
+            slots.computeIfAbsent(slotCode, k -> new ArrayList<>())
                 .add(entry.getPerson().getId());
         }
         return slots;
@@ -431,11 +473,17 @@ public class ScheduleService {
 
         Map<String, List<String>> sunday = baseSundayData();
         Map<Integer, List<Long>> sundaySlots = new LinkedHashMap<>();
-        sundaySlots.put(71, new ArrayList<>());
-        sundaySlots.put(72, new ArrayList<>());
-        sundaySlots.put(73, new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_R, ROLE_ASPIRANT), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_R, ROLE_MINISTRANT), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_R, ROLE_LEKTOR), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_S, ROLE_ASPIRANT), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_S, ROLE_MINISTRANT), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_S, ROLE_LEKTOR), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_P, ROLE_ASPIRANT), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_P, ROLE_MINISTRANT), new ArrayList<>());
+        sundaySlots.put(sundayRoleSlotCode(SUNDAY_P, ROLE_LEKTOR), new ArrayList<>());
         for (Map.Entry<String, List<String>> entry : sunday.entrySet()) {
-            int slot = sundaySlotFromKey(entry.getKey());
+            int slot = sundayRoleSlotFromKey(entry.getKey());
             if (slot == 0) {
                 continue;
             }
@@ -454,8 +502,90 @@ public class ScheduleService {
         return false;
     }
 
+    private boolean hasSundayRoleSlots(Map<Integer, List<String>> slots) {
+        for (Integer key : slots.keySet()) {
+            if (key != null && key >= 711 && key <= 733) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private int roleSlotCode(int day, int role) {
         return (day * 10) + role;
+    }
+
+    private int sundayRoleSlotCode(int massSlot, int role) {
+        return (massSlot * 10) + role;
+    }
+
+    private int normalizeReadSlotCode(MonthlyScheduleEntry entry) {
+        int slot = entry.getSlotCode();
+        if (slot >= SUNDAY_R && slot <= SUNDAY_P) {
+            int role = roleFromPerson(entry.getPerson());
+            return sundayRoleSlotCode(slot, role);
+        }
+        return slot;
+    }
+
+    private int roleFromPerson(Person person) {
+        PersonRole role = person.getRole();
+        if (role == PersonRole.ASPIRANT) {
+            return ROLE_ASPIRANT;
+        }
+        if (role == PersonRole.LEKTOR) {
+            return ROLE_LEKTOR;
+        }
+        return ROLE_MINISTRANT;
+    }
+
+    private void fillLegacySundayFromCombinedSlots(Map<String, List<String>> sunday, Map<Integer, List<String>> slots) {
+        Map<String, List<String>> baseSunday = baseSundayData();
+        fillLegacySundayMass(
+            sunday,
+            slots.getOrDefault(SUNDAY_R, List.of()),
+            baseSunday.getOrDefault("PRYMARIA (aspiranci)", List.of()),
+            baseSunday.getOrDefault("PRYMARIA (lektorzy)", List.of()),
+            "PRYMARIA"
+        );
+        fillLegacySundayMass(
+            sunday,
+            slots.getOrDefault(SUNDAY_S, List.of()),
+            baseSunday.getOrDefault("SUMA (aspiranci)", List.of()),
+            baseSunday.getOrDefault("SUMA (lektorzy)", List.of()),
+            "SUMA"
+        );
+        fillLegacySundayMass(
+            sunday,
+            slots.getOrDefault(SUNDAY_P, List.of()),
+            baseSunday.getOrDefault("III MSZA (aspiranci)", List.of()),
+            baseSunday.getOrDefault("III MSZA (lektorzy)", List.of()),
+            "III MSZA"
+        );
+    }
+
+    private void fillLegacySundayMass(Map<String, List<String>> sunday,
+                                      List<String> allNames,
+                                      List<String> baseAspirants,
+                                      List<String> baseLectors,
+                                      String massLabel) {
+        Set<String> aspSet = new HashSet<>(baseAspirants);
+        Set<String> lekSet = new HashSet<>(baseLectors);
+        List<String> aspirants = new ArrayList<>();
+        List<String> lectors = new ArrayList<>();
+        List<String> ministrants = new ArrayList<>();
+        for (String name : allNames) {
+            if (aspSet.contains(name)) {
+                aspirants.add(name);
+            } else if (lekSet.contains(name)) {
+                lectors.add(name);
+            } else {
+                ministrants.add(name);
+            }
+        }
+        sunday.put(massLabel + " (aspiranci)", aspirants);
+        sunday.put(massLabel + " (ministranci)", ministrants);
+        sunday.put(massLabel + " (lektorzy)", lectors);
     }
 
     private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {

@@ -41,9 +41,15 @@ public class ScheduleController {
         new Slot("Sobota - Aspiranci", 61),
         new Slot("Sobota - Ministranci", 62),
         new Slot("Sobota - Lektorzy", 63),
-        new Slot("Niedziela R", 71),
-        new Slot("Niedziela S", 72),
-        new Slot("Niedziela P", 73)
+        new Slot("Niedziela R - Aspiranci", 711),
+        new Slot("Niedziela R - Ministranci", 712),
+        new Slot("Niedziela R - Lektorzy", 713),
+        new Slot("Niedziela S - Aspiranci", 721),
+        new Slot("Niedziela S - Ministranci", 722),
+        new Slot("Niedziela S - Lektorzy", 723),
+        new Slot("Niedziela P - Aspiranci", 731),
+        new Slot("Niedziela P - Ministranci", 732),
+        new Slot("Niedziela P - Lektorzy", 733)
     );
 
     private final ScheduleService scheduleService;
@@ -132,14 +138,12 @@ public class ScheduleController {
 
     private Map<Integer, List<Long>> normalizeSlots(Map<Integer, List<Long>> raw) {
         Map<Integer, List<Long>> normalized = new LinkedHashMap<>();
-        boolean hasRoleSlots = raw.keySet().stream().anyMatch(k -> k != null && k >= 11 && k <= 63);
-        if (hasRoleSlots) {
-            return raw;
-        }
         for (Map.Entry<Integer, List<Long>> entry : raw.entrySet()) {
             int slot = entry.getKey();
             int mapped = slot;
             if (slot >= 1 && slot <= 6) {
+                mapped = (slot * 10) + 2;
+            } else if (slot >= 71 && slot <= 73) {
                 mapped = (slot * 10) + 2;
             }
             normalized.computeIfAbsent(mapped, k -> new ArrayList<>()).addAll(entry.getValue());
