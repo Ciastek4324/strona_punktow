@@ -40,6 +40,8 @@ import pl.punkty.app.service.ScheduleService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
@@ -448,8 +450,8 @@ public class PointsController {
         }
     }
 
-    @GetMapping("/generator/docx")
-    public void generatorDocx(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+    @GetMapping("/generator/docm")
+    public void generatorDocm(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                               HttpServletResponse response) throws IOException {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         String monthName = monthName(effectiveDate);
@@ -458,54 +460,222 @@ public class PointsController {
         Map<String, List<String>> weekdayLektorzy = scheduleService.weekdayLektorzy(effectiveDate);
         Map<String, List<String>> weekdayAspiranci = scheduleService.weekdayAspiranci(effectiveDate);
 
-        response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docx\"");
+        response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
+        response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docm\"");
 
-        try (XWPFDocument doc = new XWPFDocument(); OutputStream out = response.getOutputStream()) {
-            XWPFParagraph title = doc.createParagraph();
-            XWPFRun titleRun = title.createRun();
-            titleRun.setText("MSZE NIEDZIELNE - " + monthName + " (od " + formatDate(effectiveDate) + ")");
-            titleRun.setBold(true);
-            titleRun.setFontFamily("Dosis");
-            titleRun.setFontSize(14);
-
-            for (Map.Entry<String, List<String>> entry : sunday.entrySet()) {
-                XWPFParagraph p = doc.createParagraph();
-                XWPFRun run = p.createRun();
-                run.setFontFamily("Dosis");
-                run.setFontSize(11);
-                run.setText(entry.getKey() + ": " + String.join(", ", entry.getValue()));
+        try (InputStream template = PointsController.class.getResourceAsStream("/templates/lista-template.docm");
+             OutputStream out = response.getOutputStream()) {
+            if (template == null) {
+                throw new IOException("Brak szablonu /templates/lista-template.docm");
             }
-
-            XWPFParagraph wdHeader = doc.createParagraph();
-            XWPFRun wdRun = wdHeader.createRun();
-            wdRun.setText("DNI POWSZEDNIE");
-            wdRun.setBold(true);
-            wdRun.setFontFamily("Dosis");
-            wdRun.setFontSize(13);
-
-            addWeekSection(doc, "MINISTRANCI", weekdayMinistranci);
-            addWeekSection(doc, "LEKTORZY", weekdayLektorzy);
-            addWeekSection(doc, "ASPIRANCI", weekdayAspiranci);
-
-            doc.write(out);
+            writeDocmFromTemplate(
+                template,
+                out,
+                monthName,
+                formatDate(effectiveDate),
+                sunday,
+                weekdayMinistranci,
+                weekdayLektorzy,
+                weekdayAspiranci
+            );
         }
     }
 
-    private void addWeekSection(XWPFDocument doc, String label, Map<String, List<String>> data) {
-        XWPFParagraph section = doc.createParagraph();
-        XWPFRun sr = section.createRun();
-        sr.setText(label + ":");
-        sr.setBold(true);
-        sr.setFontFamily("Dosis");
-        sr.setFontSize(12);
-        for (String day : WEEK_DAYS) {
-            XWPFParagraph p = doc.createParagraph();
-            XWPFRun run = p.createRun();
-            run.setFontFamily("Dosis");
-            run.setFontSize(11);
-            run.setText(day + " - " + String.join(", ", data.getOrDefault(day, List.of())));
+    @GetMapping("/generator/docx")
+    public void generatorDocx(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                              HttpServletResponse response) throws IOException {
+        generatorDocm(date, response);
+    }
+
+    private void writeDocmFromTemplate(InputStream template,
+                                       OutputStream out,
+                                       String monthName,
+                                       String validFromDate,
+                                       Map<String, List<String>> sunday,
+                                       Map<String, List<String>> weekdayMinistranci,
+                                       Map<String, List<String>> weekdayLektorzy,
+                                       Map<String, List<String>> weekdayAspiranci) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(template);
+             ZipOutputStream zos = new ZipOutputStream(out)) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                ZipEntry outEntry = new ZipEntry(entry.getName());
+                outEntry.setTime(entry.getTime());
+                zos.putNextEntry(outEntry);
+                if ("word/document.xml".equals(entry.getName())) {
+                    String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+                    String patched = patchTemplateXml(
+                        xml,
+                        monthName,
+                        validFromDate,
+                        sunday,
+                        weekdayMinistranci,
+                        weekdayLektorzy,
+                        weekdayAspiranci
+                    );
+                    zos.write(patched.getBytes(StandardCharsets.UTF_8));
+                } else {
+                    zis.transferTo(zos);
+                }
+                zos.closeEntry();
+                zis.closeEntry();
+            }
+            zos.finish();
         }
+    }
+
+    private String patchTemplateXml(String xml,
+                                    String monthName,
+                                    String validFromDate,
+                                    Map<String, List<String>> sunday,
+                                    Map<String, List<String>> weekdayMinistranci,
+                                    Map<String, List<String>> weekdayLektorzy,
+                                    Map<String, List<String>> weekdayAspiranci) {
+        String out = replaceMonthInXml(xml, monthName);
+        out = out.replaceFirst("\\d{2}\\.\\d{2}\\.\\d{4}", Matcher.quoteReplacement(validFromDate));
+        out = replaceScheduleParagraphs(out, sunday, weekdayMinistranci, weekdayLektorzy, weekdayAspiranci);
+        return out;
+    }
+
+    private String replaceScheduleParagraphs(String xml,
+                                             Map<String, List<String>> sunday,
+                                             Map<String, List<String>> weekdayMinistranci,
+                                             Map<String, List<String>> weekdayLektorzy,
+                                             Map<String, List<String>> weekdayAspiranci) {
+        Pattern p = Pattern.compile("(?s)<w:p[^>]*>.*?</w:p>");
+        Matcher m = p.matcher(xml);
+        StringBuffer sb = new StringBuffer();
+
+        String section = "";
+        boolean skipNextSundayContinuation = false;
+
+        while (m.find()) {
+            String para = m.group();
+            String plain = normalizeSpace(stripTags(para));
+            String normalized = normalizeForMatch(plain);
+
+            String sundayLabel = detectSundayLabel(normalized);
+            if (sundayLabel != null) {
+                String line = sundayLabel + ": " + joinNames(sunday.getOrDefault(sundayLabel, List.of()));
+                String replaced = rebuildParagraphWithSingleRun(para, line);
+                m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
+                skipNextSundayContinuation = true;
+                continue;
+            }
+
+            if (skipNextSundayContinuation && isLikelySundayContinuation(normalized)) {
+                String replaced = rebuildParagraphWithSingleRun(para, "");
+                m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
+                skipNextSundayContinuation = false;
+                continue;
+            }
+            skipNextSundayContinuation = false;
+
+            if (normalized.contains("ministranci:") && !normalized.contains("prymaria") && !normalized.contains("suma")) {
+                section = "MINISTRANCI";
+            } else if (normalized.contains("lektorzy:") && !normalized.contains("prymaria") && !normalized.contains("suma")) {
+                section = "LEKTORZY";
+            } else if (normalized.contains("aspiranci:") && !normalized.contains("prymaria") && !normalized.contains("suma")) {
+                section = "ASPIRANCI";
+            }
+
+            String day = detectWeekDay(normalized);
+            if (day != null && !section.isEmpty()) {
+                Map<String, List<String>> source = switch (section) {
+                    case "MINISTRANCI" -> weekdayMinistranci;
+                    case "LEKTORZY" -> weekdayLektorzy;
+                    case "ASPIRANCI" -> weekdayAspiranci;
+                    default -> Map.of();
+                };
+                String line = day + " - " + joinNames(source.getOrDefault(day, List.of()));
+                String replaced = rebuildParagraphWithSingleRun(para, line);
+                m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
+                continue;
+            }
+
+            m.appendReplacement(sb, Matcher.quoteReplacement(para));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private String detectSundayLabel(String normalizedLine) {
+        for (String key : List.of(
+            "PRYMARIA (aspiranci)",
+            "PRYMARIA (ministranci)",
+            "PRYMARIA (lektorzy)",
+            "SUMA (aspiranci)",
+            "SUMA (ministranci)",
+            "SUMA (lektorzy)",
+            "III MSZA (aspiranci)",
+            "III MSZA (ministranci)",
+            "III MSZA (lektorzy)"
+        )) {
+            if (normalizedLine.startsWith(normalizeForMatch(key))) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    private boolean isLikelySundayContinuation(String normalizedLine) {
+        if (normalizedLine.isBlank()) {
+            return false;
+        }
+        if (detectWeekDay(normalizedLine) != null) {
+            return false;
+        }
+        return !normalizedLine.contains(":")
+            && !normalizedLine.contains("dni powszednie")
+            && !normalizedLine.contains("msze niedzielne");
+    }
+
+    private String detectWeekDay(String normalizedLine) {
+        for (String day : WEEK_DAYS) {
+            if (normalizedLine.startsWith(normalizeForMatch(day))) {
+                return day;
+            }
+            if (normalizedLine.startsWith(normalizeForMatch(withPolishDay(day)))) {
+                return day;
+            }
+        }
+        return null;
+    }
+
+    private String withPolishDay(String day) {
+        return switch (day) {
+            case "Poniedzialek" -> "Poniedziałek";
+            case "Sroda" -> "Środa";
+            case "Piatek" -> "Piątek";
+            default -> day;
+        };
+    }
+
+    private String joinNames(List<String> names) {
+        List<String> fixed = new ArrayList<>();
+        for (String name : names) {
+            fixed.add(fixTextArtifacts(name));
+        }
+        return String.join(", ", fixed);
+    }
+
+    private String rebuildParagraphWithSingleRun(String paragraph, String newText) {
+        String startTag = extractStartTag(paragraph);
+        String pPr = extractPPr(paragraph);
+        String rPr = extractFirstRunPr(paragraph);
+        StringBuilder rebuilt = new StringBuilder();
+        rebuilt.append(startTag);
+        if (pPr != null) {
+            rebuilt.append(pPr);
+        }
+        rebuilt.append("<w:r>");
+        if (rPr != null) {
+            rebuilt.append(rPr);
+        }
+        rebuilt.append("<w:t xml:space=\"preserve\">")
+            .append(escapeXml(fixTextArtifacts(newText)))
+            .append("</w:t></w:r></w:p>");
+        return rebuilt.toString();
     }
 
     private String replaceMonthInXml(String xml, String monthName) {
@@ -581,6 +751,51 @@ public class PointsController {
             .replace("&amp;", "&")
             .replace("&quot;", "\"")
             .replace("&#39;", "'");
+    }
+
+    private String normalizeSpace(String text) {
+        return text == null ? "" : text.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
+    }
+
+    private String normalizeForMatch(String text) {
+        String fixed = fixTextArtifacts(text).toLowerCase(LOCALE_PL);
+        String normalized = Normalizer.normalize(fixed, Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+", "");
+        return normalized.replace("–", "-")
+            .replace("—", "-")
+            .replace("‑", "-")
+            .replaceAll("\\s+", " ")
+            .trim();
+    }
+
+    private String fixTextArtifacts(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text
+            .replace("Ä…", "ą")
+            .replace("Ä‡", "ć")
+            .replace("Ä™", "ę")
+            .replace("Äł", "ł")
+            .replace("Ĺ‚", "ł")
+            .replace("Ĺ„", "ń")
+            .replace("Ăł", "ó")
+            .replace("Ĺ›", "ś")
+            .replace("Ĺş", "ź")
+            .replace("Ĺź", "ź")
+            .replace("Ĺ¼", "ż")
+            .replace("Å»", "Ż")
+            .replace("Åš", "Ś")
+            .replace("Åš", "Ś")
+            .replace("â€“", "-")
+            .replace("â€”", "-")
+            .replace("â€ž", "\"")
+            .replace("â€ť", "\"")
+            .replace("â€ś", "\"")
+            .replace("â€", "\"")
+            .replace("â€¦", "...")
+            .replace("Ă„â€¦", "ą")
+            .replace("FrĂ„â€¦czyk", "Frączyk");
     }
 
     private boolean containsNamesInOrder(String plain, List<String> names) {
