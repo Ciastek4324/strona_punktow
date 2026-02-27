@@ -241,7 +241,6 @@ public class PointsController {
                             @RequestParam(required = false, defaultValue = "monthly") String tab,
                             @RequestParam(required = false, defaultValue = "false") boolean useSchedule,
                             Model model) {
-        peopleService.normalizeAllNamesToAscii();
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
@@ -288,7 +287,6 @@ public class PointsController {
     @GetMapping("/members")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String members(Model model) {
-        peopleService.normalizeAllNamesToAscii();
         List<Person> people = peopleService.getPeopleSorted();
         List<PointsRow> rows = new ArrayList<>();
         for (Person person : people) {

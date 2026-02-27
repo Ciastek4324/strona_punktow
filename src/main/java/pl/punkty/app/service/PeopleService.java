@@ -102,7 +102,9 @@ public class PeopleService {
             if (name.isBlank()) {
                 return UpdatePersonResult.INVALID;
             }
-            if (existsByNormalizedName(name, id)) {
+            // Allow saving role/points even if historical duplicates exist and the name is unchanged.
+            if (!normalizeNameKey(person.getDisplayName()).equals(normalizeNameKey(name))
+                && existsByNormalizedName(name, id)) {
                 return UpdatePersonResult.DUPLICATE;
             }
             person.setDisplayName(name);
