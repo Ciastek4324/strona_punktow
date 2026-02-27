@@ -126,7 +126,7 @@ public class ScheduleService {
     private Map<String, List<String>> baseWeekdayAspiranci() {
         Map<String, List<String>> weekdayAspiranci = new LinkedHashMap<>();
         weekdayAspiranci.put("Poniedzialek", List.of("Rafa\u0142 Opoka"));
-        weekdayAspiranci.put("Wtorek", List.of("Wojciech \u017belek"));
+        weekdayAspiranci.put("Wtorek", List.of("Wojciech \u017Belek"));
         weekdayAspiranci.put("Sroda", List.of("Krzysztof Wierzycki"));
         weekdayAspiranci.put("Czwartek", List.of());
         weekdayAspiranci.put("Piatek", List.of());
@@ -138,11 +138,15 @@ public class ScheduleService {
         if (!slots.isEmpty()) {
             Map<String, List<String>> map = new LinkedHashMap<>();
             boolean roleSlots = hasRoleSlots(slots);
+            Map<String, List<String>> fallback = shiftWeekday(baseWeekdayAspiranci(), monthOffsetFromBase(date));
+            boolean fallbackNeeded = roleSlots && allWeekdayAspirantSlotsEmpty(slots);
             for (int i = 0; i < WEEK_DAYS.size(); i++) {
                 int day = i + 1;
                 List<String> names = roleSlots
-                    ? slots.getOrDefault(roleSlotCode(day, ROLE_ASPIRANT), List.of())
-                    : shiftWeekday(baseWeekdayAspiranci(), monthOffsetFromBase(date)).getOrDefault(WEEK_DAYS.get(i), List.of());
+                    ? (fallbackNeeded
+                        ? fallback.getOrDefault(WEEK_DAYS.get(i), List.of())
+                        : slots.getOrDefault(roleSlotCode(day, ROLE_ASPIRANT), List.of()))
+                    : fallback.getOrDefault(WEEK_DAYS.get(i), List.of());
                 map.put(WEEK_DAYS.get(i), names);
             }
             return map;
@@ -268,7 +272,7 @@ public class ScheduleService {
         weekdayMinistranci.put("Poniedzialek", List.of("Nikodem Fr\u0105czyk", "Krzysztof Florek"));
         weekdayMinistranci.put("Wtorek", List.of("Tomasz Gancarczyk", "Marcin Opoka"));
         weekdayMinistranci.put("Sroda", List.of("Damian Sopata", "Karol Je\u017c", "Pawe\u0142 Je\u017c"));
-        weekdayMinistranci.put("Czwartek", List.of("Szymon \u017belek", "Antoni Gorcowski"));
+        weekdayMinistranci.put("Czwartek", List.of("Szymon \u017Belek", "Antoni Gorcowski"));
         weekdayMinistranci.put("Piatek", List.of("Wojciech Bieniek", "Sebastian Wierzycki"));
         weekdayMinistranci.put("Sobota", List.of("Filip Wierzycki", "Wiktor Wierzycki", "Marcel Smoter"));
         return weekdayMinistranci;
@@ -286,8 +290,8 @@ public class ScheduleService {
         sunday.put("PRYMARIA (aspiranci)", List.of("Rafa\u0142 Opoka"));
         sunday.put("PRYMARIA (ministranci)", List.of("Marcel Smoter", "Krzysztof Florek", "Marcin Opoka", "Tomasz Gancarczyk"));
         sunday.put("PRYMARIA (lektorzy)", List.of("Stanis\u0142aw Lubecki", "Kacper Florek", "Micha\u0142 Furtak"));
-        sunday.put("SUMA (aspiranci)", List.of("Wojciech \u017belek"));
-        sunday.put("SUMA (ministranci)", List.of("Szymon \u017belek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
+        sunday.put("SUMA (aspiranci)", List.of("Wojciech \u017Belek"));
+        sunday.put("SUMA (ministranci)", List.of("Szymon \u017Belek", "Filip Wierzycki", "Wiktor Wierzycki", "Antoni Gorcowski", "Wojciech Bieniek"));
         sunday.put("SUMA (lektorzy)", List.of("Daniel Nowak", "Jakub Mucha", "Szymon Mucha", "Jan Migacz"));
         sunday.put("III MSZA (aspiranci)", List.of("Krzysztof Wierzycki"));
         sunday.put("III MSZA (ministranci)", List.of("Nikodem Fr\u0105czyk", "Damian Sopata", "Karol Je\u017c", "Pawe\u0142 Je\u017c"));
@@ -578,7 +582,9 @@ public class ScheduleService {
         sunday.put(massLabel + " (aspiranci)", aspirants);
         sunday.put(massLabel + " (ministranci)", ministrants);
         sunday.put(massLabel + " (lektorzy)", lectors);
-    }    private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {
+    }
+
+    private void addNames(List<Long> ids, List<String> names, Map<String, Long> nameToId) {
         Map<String, Long> normalized = new HashMap<>();
         for (Map.Entry<String, Long> entry : nameToId.entrySet()) {
             normalized.put(normalizeNameKey(entry.getKey()), entry.getValue());
@@ -592,6 +598,15 @@ public class ScheduleService {
                 ids.add(id);
             }
         }
+    }
+
+    private boolean allWeekdayAspirantSlotsEmpty(Map<Integer, List<String>> slots) {
+        for (int day = 1; day <= 6; day++) {
+            if (!slots.getOrDefault(roleSlotCode(day, ROLE_ASPIRANT), List.of()).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String normalizeNameKey(String value) {

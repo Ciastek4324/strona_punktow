@@ -41,8 +41,12 @@ public class PeopleService {
         KNOWN_NAME_FIXES.put("Stanislaw Lubecki", "Stanis\u0142aw Lubecki");
         KNOWN_NAME_FIXES.put("Michal Furtak", "Micha\u0142 Furtak");
         KNOWN_NAME_FIXES.put("Michal Opoka", "Micha\u0142 Opoka");
-        KNOWN_NAME_FIXES.put("Wojciech Zelek", "Wojciech \u017belek");
-        KNOWN_NAME_FIXES.put("Szymon Zelek", "Szymon \u017belek");
+        KNOWN_NAME_FIXES.put("Wojciech Zelek", "Wojciech \u017Belek");
+        KNOWN_NAME_FIXES.put("Szymon Zelek", "Szymon \u017Belek");
+        KNOWN_NAME_FIXES.put("Nikodem Farnczyk", "Nikodem Fr\u0105czyk");
+        KNOWN_NAME_FIXES.put("Nikodem Fraczyk", "Nikodem Fr\u0105czyk");
+        KNOWN_NAME_FIXES.put("Wojciech Zelki", "Wojciech \u017Belek");
+        KNOWN_NAME_FIXES.put("Szymon Zelki", "Szymon \u017Belek");
 
         KNOWN_NAME_FIXES.put("FrĂ„â€¦czyk", "Fr\u0105czyk");
         KNOWN_NAME_FIXES.put("JeĂ„Ä…Ă„Ëť", "Je\u017c");

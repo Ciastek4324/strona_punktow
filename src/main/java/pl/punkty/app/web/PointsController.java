@@ -228,6 +228,7 @@ public class PointsController {
                             @RequestParam(required = false, defaultValue = "monthly") String tab,
                             @RequestParam(required = false, defaultValue = "false") boolean useSchedule,
                             Model model) {
+        peopleService.normalizeAllNamesToAscii();
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         model.addAttribute("date", effectiveDate);
         model.addAttribute("monthName", monthName(effectiveDate));
@@ -274,6 +275,7 @@ public class PointsController {
     @GetMapping("/members")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public String members(Model model) {
+        peopleService.normalizeAllNamesToAscii();
         List<Person> people = peopleService.getPeopleSorted();
         List<PointsRow> rows = new ArrayList<>();
         for (Person person : people) {
@@ -601,9 +603,8 @@ public class PointsController {
 
             String sundayLabel = detectSundayLabel(normalized);
             if (sundayLabel != null) {
-                String label = sundayLabel + ": ";
-                String value = joinNames(sunday.getOrDefault(sundayLabel, List.of()));
-                String replaced = rebuildParagraphWithTwoRuns(para, label, value);
+                String line = sundayLabel + ": " + joinNames(sunday.getOrDefault(sundayLabel, List.of()));
+                String replaced = rebuildParagraphWithSingleRun(para, line);
                 m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
                 skipNextSundayContinuation = true;
                 continue;
@@ -633,9 +634,8 @@ public class PointsController {
                     case "ASPIRANCI" -> weekdayAspiranci;
                     default -> Map.of();
                 };
-                String label = day + " - ";
-                String value = joinNames(source.getOrDefault(day, List.of()));
-                String replaced = rebuildParagraphWithTwoRuns(para, label, value);
+                String line = day + " - " + joinNames(source.getOrDefault(day, List.of()));
+                String replaced = rebuildParagraphWithSingleRun(para, line);
                 m.appendReplacement(sb, Matcher.quoteReplacement(replaced));
                 continue;
             }
