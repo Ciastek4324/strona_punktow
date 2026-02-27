@@ -41,6 +41,8 @@ import pl.punkty.app.service.ScheduleService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
@@ -57,6 +59,17 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 @Controller
 public class PointsController {
@@ -578,10 +591,127 @@ public class PointsController {
                                     Map<String, List<String>> weekdayMinistranci,
                                     Map<String, List<String>> weekdayLektorzy,
                                     Map<String, List<String>> weekdayAspiranci) {
-        String out = replaceMonthInXml(xml, monthName);
-        out = out.replaceFirst("\\d{2}\\.\\d{2}\\.\\d{4}", Matcher.quoteReplacement(validFromDate));
-        out = replaceScheduleParagraphs(out, sunday, weekdayMinistranci, weekdayLektorzy, weekdayAspiranci);
-        return out;
+        try {
+            Document doc = parseWordXml(xml);
+            patchTemplateDom(doc, monthName, validFromDate, sunday, weekdayMinistranci, weekdayLektorzy, weekdayAspiranci);
+            return toXml(doc);
+        } catch (Exception ex) {
+            String out = replaceMonthInXml(xml, monthName);
+            out = out.replaceFirst("\\d{2}\\.\\d{2}\\.\\d{4}", Matcher.quoteReplacement(validFromDate));
+            out = replaceScheduleParagraphs(out, sunday, weekdayMinistranci, weekdayLektorzy, weekdayAspiranci);
+            return out;
+        }
+    }
+
+    private void patchTemplateDom(Document doc,
+                                  String monthName,
+                                  String validFromDate,
+                                  Map<String, List<String>> sunday,
+                                  Map<String, List<String>> weekdayMinistranci,
+                                  Map<String, List<String>> weekdayLektorzy,
+                                  Map<String, List<String>> weekdayAspiranci) {
+        NodeList paragraphs = doc.getElementsByTagNameNS("*", "p");
+        String section = "";
+        boolean skipNextSundayContinuation = false;
+        boolean monthReplaced = false;
+        boolean dateReplaced = false;
+
+        for (int i = 0; i < paragraphs.getLength(); i++) {
+            Element p = (Element) paragraphs.item(i);
+            String plain = normalizeSpace(getParagraphText(p));
+            if (plain.isBlank()) {
+                continue;
+            }
+
+            if (!monthReplaced && monthNames().contains(plain)) {
+                setParagraphText(p, monthName);
+                monthReplaced = true;
+                continue;
+            }
+            if (!dateReplaced && plain.matches(".*\\d{2}\\.\\d{2}\\.\\d{4}.*")) {
+                setParagraphText(p, plain.replaceFirst("\\d{2}\\.\\d{2}\\.\\d{4}", validFromDate));
+                dateReplaced = true;
+                continue;
+            }
+
+            String normalized = normalizeForMatch(plain);
+            String sundayLabel = detectSundayLabel(normalized);
+            if (sundayLabel != null) {
+                String line = sundayLabel + ": " + joinNames(sunday.getOrDefault(sundayLabel, List.of()));
+                setParagraphText(p, line);
+                skipNextSundayContinuation = true;
+                continue;
+            }
+
+            if (skipNextSundayContinuation && isLikelySundayContinuation(normalized)) {
+                setParagraphText(p, "");
+                skipNextSundayContinuation = false;
+                continue;
+            }
+            skipNextSundayContinuation = false;
+
+            if (normalized.contains("ministranci:") && !normalized.contains("prymaria") && !normalized.contains("suma")) {
+                section = "MINISTRANCI";
+            } else if (normalized.contains("lektorzy:") && !normalized.contains("prymaria") && !normalized.contains("suma")) {
+                section = "LEKTORZY";
+            } else if (normalized.contains("aspiranci:") && !normalized.contains("prymaria") && !normalized.contains("suma")) {
+                section = "ASPIRANCI";
+            }
+
+            String day = detectWeekDay(normalized);
+            if (day != null && !section.isEmpty()) {
+                Map<String, List<String>> source = switch (section) {
+                    case "MINISTRANCI" -> weekdayMinistranci;
+                    case "LEKTORZY" -> weekdayLektorzy;
+                    case "ASPIRANCI" -> weekdayAspiranci;
+                    default -> Map.of();
+                };
+                String line = day + " - " + joinNames(source.getOrDefault(day, List.of()));
+                setParagraphText(p, line);
+            }
+        }
+    }
+
+    private Document parseWordXml(String xml) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        try {
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        } catch (Exception ignored) {
+        }
+        return factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
+    }
+
+    private String toXml(Document doc) throws Exception {
+        TransformerFactory tf = TransformerFactory.newInstance();
+        tf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString();
+    }
+
+    private String getParagraphText(Element p) {
+        NodeList textNodes = p.getElementsByTagNameNS("*", "t");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < textNodes.getLength(); i++) {
+            sb.append(textNodes.item(i).getTextContent());
+        }
+        return sb.toString();
+    }
+
+    private void setParagraphText(Element p, String text) {
+        NodeList textNodes = p.getElementsByTagNameNS("*", "t");
+        if (textNodes.getLength() == 0) {
+            return;
+        }
+        textNodes.item(0).setTextContent(fixTextArtifacts(text));
+        for (int i = 1; i < textNodes.getLength(); i++) {
+            textNodes.item(i).setTextContent("");
+        }
     }
 
     private String replaceScheduleParagraphs(String xml,
