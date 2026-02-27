@@ -670,19 +670,45 @@ public class PointsController {
 
             String day = detectWeekDay(normalized);
             if (day != null && !section.isEmpty()) {
-                String value = switch (section) {
-                    case "MINISTRANCI" -> {
-                        String left = joinNames(weekdayMinistranci.getOrDefault(day, List.of()));
-                        String right = joinNames(weekdayAspiranci.getOrDefault(day, List.of()));
-                        yield right.isBlank() ? left : (left + "    " + right);
-                    }
-                    case "LEKTORZY" -> joinNames(weekdayLektorzy.getOrDefault(day, List.of()));
-                    case "ASPIRANCI" -> joinNames(weekdayAspiranci.getOrDefault(day, List.of()));
-                    default -> "";
-                };
-                setParagraphTailAfterLabel(p, raw, "^[^\\-\\u2013\\u2014]*[\\-\\u2013\\u2014]\\s*", value);
+                if ("MINISTRANCI".equals(section)) {
+                    setWeekdayMinistrantsTail(p, raw, day, weekdayMinistranci, weekdayAspiranci);
+                } else {
+                    String value = switch (section) {
+                        case "LEKTORZY" -> joinNames(weekdayLektorzy.getOrDefault(day, List.of()));
+                        case "ASPIRANCI" -> joinNames(weekdayAspiranci.getOrDefault(day, List.of()));
+                        default -> "";
+                    };
+                    setParagraphTailAfterLabel(p, raw, "^[^\\-\\u2013\\u2014]*[\\-\\u2013\\u2014]\\s*", value);
+                }
             }
         }
+    }
+
+    private void setWeekdayMinistrantsTail(Element p,
+                                           String raw,
+                                           String day,
+                                           Map<String, List<String>> weekdayMinistranci,
+                                           Map<String, List<String>> weekdayAspiranci) {
+        Matcher label = Pattern.compile("^[^\\-\\u2013\\u2014]*[\\-\\u2013\\u2014]\\s*").matcher(raw);
+        if (!label.find()) {
+            return;
+        }
+        int startIndex = label.end();
+        String originalTail = startIndex <= raw.length() ? raw.substring(startIndex) : "";
+
+        String left = joinNames(weekdayMinistranci.getOrDefault(day, List.of()));
+        String right = joinNames(weekdayAspiranci.getOrDefault(day, List.of()));
+
+        String value;
+        Matcher split = Pattern.compile("^(.*?)(\\s{5,})(\\S.*)$").matcher(originalTail);
+        if (split.find()) {
+            String gap = split.group(2);
+            value = right.isBlank() ? left : (left + gap + right);
+        } else {
+            value = right.isBlank() ? left : (left + " " + right);
+        }
+
+        setParagraphValueFromIndex(p, startIndex, value);
     }
 
     private Document parseWordXml(String xml) throws Exception {
