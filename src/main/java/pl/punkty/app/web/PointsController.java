@@ -835,21 +835,16 @@ public class PointsController {
     }
 
     private String detectSundayLabel(String normalizedLine) {
-        for (String key : List.of(
-            "PRYMARIA (aspiranci)",
-            "PRYMARIA (ministranci)",
-            "PRYMARIA (lektorzy)",
-            "SUMA (aspiranci)",
-            "SUMA (ministranci)",
-            "SUMA (lektorzy)",
-            "III MSZA (aspiranci)",
-            "III MSZA (ministranci)",
-            "III MSZA (lektorzy)"
-        )) {
-            if (normalizedLine.startsWith(normalizeForMatch(key))) {
-                return key;
-            }
-        }
+        String line = normalizedLine.replace("–", "-").replace("—", "-");
+        if (line.contains("prymaria") && line.contains("(aspiranci)")) return "PRYMARIA (aspiranci)";
+        if (line.contains("prymaria") && line.contains("(ministranci)")) return "PRYMARIA (ministranci)";
+        if (line.contains("prymaria") && line.contains("(lektorzy)")) return "PRYMARIA (lektorzy)";
+        if (line.contains("suma") && line.contains("(aspiranci)")) return "SUMA (aspiranci)";
+        if (line.contains("suma") && line.contains("(ministranci)")) return "SUMA (ministranci)";
+        if (line.contains("suma") && line.contains("(lektorzy)")) return "SUMA (lektorzy)";
+        if (line.contains("iii msza") && line.contains("(aspiranci)")) return "III MSZA (aspiranci)";
+        if (line.contains("iii msza") && line.contains("(ministranci)")) return "III MSZA (ministranci)";
+        if (line.contains("iii msza") && line.contains("(lektorzy)")) return "III MSZA (lektorzy)";
         return null;
     }
 
