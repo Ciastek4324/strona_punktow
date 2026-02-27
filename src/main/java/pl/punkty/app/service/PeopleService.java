@@ -99,7 +99,7 @@ public class PeopleService {
         person.setDisplayName(name);
         person.setRole(role);
         person.setBasePoints(points);
-        personRepository.save(person);
+        personRepository.saveAndFlush(person);
         return AddPersonResult.ADDED;
     }
 
@@ -107,6 +107,7 @@ public class PeopleService {
         updatePerson(id, null, role, basePoints);
     }
 
+    @Transactional
     public UpdatePersonResult updatePerson(Long id, String displayName, PersonRole role, int basePoints) {
         int points = sanitizePoints(basePoints);
         Person person = personRepository.findById(id).orElse(null);
@@ -129,14 +130,14 @@ public class PeopleService {
 
         person.setRole(role);
         person.setBasePoints(points);
-        personRepository.save(person);
+        personRepository.saveAndFlush(person);
         return UpdatePersonResult.UPDATED;
     }
 
     public void updateRole(Long id, PersonRole role) {
         personRepository.findById(id).ifPresent(person -> {
             person.setRole(role);
-            personRepository.save(person);
+            personRepository.saveAndFlush(person);
         });
     }
 
@@ -160,7 +161,7 @@ public class PeopleService {
             }
         }
         if (changed) {
-            personRepository.saveAll(people);
+            personRepository.saveAllAndFlush(people);
         }
     }
 

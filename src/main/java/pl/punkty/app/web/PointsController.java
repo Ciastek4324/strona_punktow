@@ -618,7 +618,8 @@ public class PointsController {
 
         for (int i = 0; i < paragraphs.getLength(); i++) {
             Element p = (Element) paragraphs.item(i);
-            String plain = normalizeSpace(getParagraphText(p));
+            String raw = getParagraphText(p);
+            String plain = normalizeSpace(raw);
             if (plain.isBlank()) {
                 continue;
             }
@@ -637,7 +638,7 @@ public class PointsController {
             String normalized = normalizeForMatch(plain);
             String sundayLabel = detectSundayLabel(normalized);
             if (sundayLabel != null) {
-                setParagraphTailAfterLabel(p, plain, "(?i)^.*?\\):\\s*", joinNames(sunday.getOrDefault(sundayLabel, List.of())));
+                setParagraphTailAfterLabel(p, raw, "(?i)^.*?\\):\\s*", joinNames(sunday.getOrDefault(sundayLabel, List.of())));
                 skipNextSundayContinuation = true;
                 continue;
             }
@@ -659,13 +660,17 @@ public class PointsController {
 
             String day = detectWeekDay(normalized);
             if (day != null && !section.isEmpty()) {
-                Map<String, List<String>> source = switch (section) {
-                    case "MINISTRANCI" -> weekdayMinistranci;
-                    case "LEKTORZY" -> weekdayLektorzy;
-                    case "ASPIRANCI" -> weekdayAspiranci;
-                    default -> Map.of();
+                String value = switch (section) {
+                    case "MINISTRANCI" -> {
+                        String left = joinNames(weekdayMinistranci.getOrDefault(day, List.of()));
+                        String right = joinNames(weekdayAspiranci.getOrDefault(day, List.of()));
+                        yield right.isBlank() ? left : (left + "    " + right);
+                    }
+                    case "LEKTORZY" -> joinNames(weekdayLektorzy.getOrDefault(day, List.of()));
+                    case "ASPIRANCI" -> joinNames(weekdayAspiranci.getOrDefault(day, List.of()));
+                    default -> "";
                 };
-                setParagraphTailAfterLabel(p, plain, "^[^\\-]*\\-\\s*", joinNames(source.getOrDefault(day, List.of())));
+                setParagraphTailAfterLabel(p, raw, "^[^\\-\\u2013\\u2014]*[\\-\\u2013\\u2014]\\s*", value);
             }
         }
     }
