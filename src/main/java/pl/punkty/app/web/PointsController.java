@@ -408,8 +408,12 @@ public class PointsController {
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                @RequestParam(required = false, defaultValue = "points") String tab,
                                RedirectAttributes redirectAttributes) {
-        peopleService.deletePerson(personId);
-        redirectAttributes.addFlashAttribute("notice", "Usunieto czlonka.");
+        try {
+            peopleService.deletePerson(personId);
+            redirectAttributes.addFlashAttribute("notice", "Usunieto czlonka.");
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("error", "Nie udalo sie usunac czlonka (powiazane dane).");
+        }
         if ("members".equals(tab)) {
             return "redirect:/members";
         }
@@ -633,8 +637,7 @@ public class PointsController {
             String normalized = normalizeForMatch(plain);
             String sundayLabel = detectSundayLabel(normalized);
             if (sundayLabel != null) {
-                String line = sundayLabel + ": " + joinNames(sunday.getOrDefault(sundayLabel, List.of()));
-                setParagraphText(p, line);
+                setParagraphTailAfterLabel(p, plain, "(?i)^.*?\\):\\s*", joinNames(sunday.getOrDefault(sundayLabel, List.of())));
                 skipNextSundayContinuation = true;
                 continue;
             }
@@ -662,8 +665,7 @@ public class PointsController {
                     case "ASPIRANCI" -> weekdayAspiranci;
                     default -> Map.of();
                 };
-                String line = day + " - " + joinNames(source.getOrDefault(day, List.of()));
-                setParagraphText(p, line);
+                setParagraphTailAfterLabel(p, plain, "^[^\\-]*\\-\\s*", joinNames(source.getOrDefault(day, List.of())));
             }
         }
     }
@@ -709,6 +711,48 @@ public class PointsController {
         }
         textNodes.item(0).setTextContent(fixTextArtifacts(text));
         for (int i = 1; i < textNodes.getLength(); i++) {
+            textNodes.item(i).setTextContent("");
+        }
+    }
+
+    private void setParagraphTailAfterLabel(Element p, String plain, String labelRegex, String newTail) {
+        Matcher matcher = Pattern.compile(labelRegex).matcher(plain);
+        if (!matcher.find()) {
+            return;
+        }
+        int startIndex = matcher.end();
+        setParagraphValueFromIndex(p, startIndex, newTail);
+    }
+
+    private void setParagraphValueFromIndex(Element p, int startIndex, String value) {
+        NodeList textNodes = p.getElementsByTagNameNS("*", "t");
+        if (textNodes.getLength() == 0) {
+            return;
+        }
+
+        int cursor = 0;
+        int valueNode = -1;
+        for (int i = 0; i < textNodes.getLength(); i++) {
+            String nodeText = textNodes.item(i).getTextContent();
+            int end = cursor + nodeText.length();
+            if (startIndex < end) {
+                int keep = Math.max(0, startIndex - cursor);
+                textNodes.item(i).setTextContent(nodeText.substring(0, keep));
+                valueNode = i + 1;
+                if (keep < nodeText.length()) {
+                    valueNode = i;
+                }
+                break;
+            }
+            cursor = end;
+        }
+
+        if (valueNode < 0) {
+            valueNode = textNodes.getLength() - 1;
+        }
+
+        textNodes.item(valueNode).setTextContent(fixTextArtifacts(value));
+        for (int i = valueNode + 1; i < textNodes.getLength(); i++) {
             textNodes.item(i).setTextContent("");
         }
     }

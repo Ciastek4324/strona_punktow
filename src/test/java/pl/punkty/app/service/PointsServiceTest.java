@@ -8,7 +8,9 @@ import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.repo.MonthlyScheduleEntryRepository;
 import pl.punkty.app.repo.MonthlyScheduleRepository;
+import pl.punkty.app.repo.CurrentPointsRepository;
 import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.repo.PointsHistoryRepository;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
 import pl.punkty.app.repo.WeeklyTableRepository;
 
@@ -28,7 +30,15 @@ class PointsServiceTest {
         MonthlyScheduleRepository scheduleRepo = Mockito.mock(MonthlyScheduleRepository.class);
         MonthlyScheduleEntryRepository entryRepo = Mockito.mock(MonthlyScheduleEntryRepository.class);
         PersonRepository personRepo = Mockito.mock(PersonRepository.class);
-        PeopleService peopleService = new PeopleService(personRepo);
+        CurrentPointsRepository currentPointsRepository = Mockito.mock(CurrentPointsRepository.class);
+        PointsHistoryRepository pointsHistoryRepository = Mockito.mock(PointsHistoryRepository.class);
+        PeopleService peopleService = new PeopleService(
+            personRepo,
+            currentPointsRepository,
+            pointsHistoryRepository,
+            attendanceRepo,
+            entryRepo
+        );
         ScheduleService scheduleService = new ScheduleService(scheduleRepo, entryRepo, personRepo);
         PointsService service = new PointsService(tableRepo, attendanceRepo, peopleService, scheduleService);
 

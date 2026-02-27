@@ -9,5 +9,6 @@ import java.util.List;
 public interface MonthlyScheduleEntryRepository extends JpaRepository<MonthlyScheduleEntry, Long> {
     List<MonthlyScheduleEntry> findAllByScheduleOrderBySlotCodeAscPositionAsc(MonthlySchedule schedule);
     void deleteBySchedule(MonthlySchedule schedule);
+    void deleteByPersonId(Long personId);
     long countBySchedule(MonthlySchedule schedule);
 }

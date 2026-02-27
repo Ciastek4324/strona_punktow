@@ -1,9 +1,14 @@
 package pl.punkty.app.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pl.punkty.app.model.Person;
 import pl.punkty.app.model.PersonRole;
+import pl.punkty.app.repo.CurrentPointsRepository;
+import pl.punkty.app.repo.MonthlyScheduleEntryRepository;
 import pl.punkty.app.repo.PersonRepository;
+import pl.punkty.app.repo.PointsHistoryRepository;
+import pl.punkty.app.repo.WeeklyAttendanceRepository;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +34,10 @@ public class PeopleService {
     }
 
     private final PersonRepository personRepository;
+    private final CurrentPointsRepository currentPointsRepository;
+    private final PointsHistoryRepository pointsHistoryRepository;
+    private final WeeklyAttendanceRepository weeklyAttendanceRepository;
+    private final MonthlyScheduleEntryRepository monthlyScheduleEntryRepository;
     private static final Map<String, String> KNOWN_NAME_FIXES = new LinkedHashMap<>();
 
     static {
@@ -59,8 +68,16 @@ public class PeopleService {
         KNOWN_NAME_FIXES.put("Nikodem FrĂ„â€¦czyk", "Nikodem Fr\u0105czyk");
     }
 
-    public PeopleService(PersonRepository personRepository) {
+    public PeopleService(PersonRepository personRepository,
+                         CurrentPointsRepository currentPointsRepository,
+                         PointsHistoryRepository pointsHistoryRepository,
+                         WeeklyAttendanceRepository weeklyAttendanceRepository,
+                         MonthlyScheduleEntryRepository monthlyScheduleEntryRepository) {
         this.personRepository = personRepository;
+        this.currentPointsRepository = currentPointsRepository;
+        this.pointsHistoryRepository = pointsHistoryRepository;
+        this.weeklyAttendanceRepository = weeklyAttendanceRepository;
+        this.monthlyScheduleEntryRepository = monthlyScheduleEntryRepository;
     }
 
     public List<Person> getPeopleSorted() {
@@ -123,7 +140,12 @@ public class PeopleService {
         });
     }
 
+    @Transactional
     public void deletePerson(Long id) {
+        monthlyScheduleEntryRepository.deleteByPersonId(id);
+        weeklyAttendanceRepository.deleteByPersonId(id);
+        currentPointsRepository.deleteByPersonId(id);
+        pointsHistoryRepository.deleteByPersonId(id);
         personRepository.deleteById(id);
     }
 
@@ -154,8 +176,10 @@ public class PeopleService {
             return "";
         }
         String name = repairMojibake(value.trim());
-        for (Map.Entry<String, String> entry : KNOWN_NAME_FIXES.entrySet()) {
-            name = name.replace(entry.getKey(), entry.getValue());
+        if (looksBroken(name)) {
+            for (Map.Entry<String, String> entry : KNOWN_NAME_FIXES.entrySet()) {
+                name = name.replace(entry.getKey(), entry.getValue());
+            }
         }
         if (name.length() > 100) {
             name = name.substring(0, 100);

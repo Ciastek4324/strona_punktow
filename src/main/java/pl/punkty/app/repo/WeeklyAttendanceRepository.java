@@ -10,4 +10,5 @@ public interface WeeklyAttendanceRepository extends JpaRepository<WeeklyAttendan
     List<WeeklyAttendance> findByTableRef(WeeklyTable tableRef);
     List<WeeklyAttendance> findByTableRefIn(List<WeeklyTable> tableRefs);
     void deleteByTableRef(WeeklyTable tableRef);
+    void deleteByPersonId(Long personId);
 }

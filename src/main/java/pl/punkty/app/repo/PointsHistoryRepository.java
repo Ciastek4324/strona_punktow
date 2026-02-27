@@ -11,4 +11,5 @@ public interface PointsHistoryRepository extends JpaRepository<PointsHistory, Lo
     List<PointsHistory> findAllByOrderByChangedAtDesc();
     Page<PointsHistory> findAllByOrderByChangedAtDesc(Pageable pageable);
     Page<PointsHistory> findAllByPersonDisplayNameContainingIgnoreCaseOrderByChangedAtDesc(String query, Pageable pageable);
+    void deleteByPersonId(Long personId);
 }
