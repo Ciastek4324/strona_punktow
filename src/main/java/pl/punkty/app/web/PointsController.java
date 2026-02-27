@@ -730,30 +730,30 @@ public class PointsController {
             return;
         }
 
-        int cursor = 0;
-        int valueNode = -1;
+        List<String> originalParts = new ArrayList<>();
+        StringBuilder original = new StringBuilder();
         for (int i = 0; i < textNodes.getLength(); i++) {
-            String nodeText = textNodes.item(i).getTextContent();
-            int end = cursor + nodeText.length();
-            if (startIndex < end) {
-                int keep = Math.max(0, startIndex - cursor);
-                textNodes.item(i).setTextContent(nodeText.substring(0, keep));
-                valueNode = i + 1;
-                if (keep < nodeText.length()) {
-                    valueNode = i;
-                }
+            String part = textNodes.item(i).getTextContent();
+            originalParts.add(part);
+            original.append(part);
+        }
+
+        int safeStart = Math.max(0, Math.min(startIndex, original.length()));
+        String newPlain = original.substring(0, safeStart) + fixTextArtifacts(value);
+
+        // Re-distribute text over existing nodes to preserve original run style boundaries.
+        int cursor = 0;
+        for (int i = 0; i < textNodes.getLength(); i++) {
+            int originalLen = originalParts.get(i).length();
+            if (i == textNodes.getLength() - 1) {
+                String tail = cursor < newPlain.length() ? newPlain.substring(cursor) : "";
+                textNodes.item(i).setTextContent(tail);
                 break;
             }
-            cursor = end;
-        }
-
-        if (valueNode < 0) {
-            valueNode = textNodes.getLength() - 1;
-        }
-
-        textNodes.item(valueNode).setTextContent(fixTextArtifacts(value));
-        for (int i = valueNode + 1; i < textNodes.getLength(); i++) {
-            textNodes.item(i).setTextContent("");
+            int end = Math.min(cursor + originalLen, newPlain.length());
+            String part = cursor < end ? newPlain.substring(cursor, end) : "";
+            textNodes.item(i).setTextContent(part);
+            cursor += originalLen;
         }
     }
 
