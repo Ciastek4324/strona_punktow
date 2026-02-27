@@ -703,7 +703,7 @@ public class PointsController {
         Matcher split = Pattern.compile("^(.*?)(\\s{5,})(\\S.*)$").matcher(originalTail);
         if (split.find()) {
             String gap = split.group(2);
-            value = right.isBlank() ? left : (left + gap + right);
+            value = left + gap + right;
         } else {
             value = right.isBlank() ? left : (left + " " + right);
         }
