@@ -594,10 +594,8 @@ public class PointsController {
             patchTemplateDom(doc, monthName, validFromDate, sunday, weekdayMinistranci, weekdayLektorzy, weekdayAspiranci);
             return toXml(doc);
         } catch (Exception ex) {
-            String out = replaceMonthInXml(xml, monthName);
-            out = out.replaceFirst("\\d{2}\\.\\d{2}\\.\\d{4}", Matcher.quoteReplacement(validFromDate));
-            out = replaceScheduleParagraphs(out, sunday, weekdayMinistranci, weekdayLektorzy, weekdayAspiranci);
-            return out;
+            // Never fall back to regex reconstruction of paragraphs - it may corrupt DOCM XML.
+            return xml;
         }
     }
 
@@ -683,7 +681,10 @@ public class PointsController {
 
     private String toXml(Document doc) throws Exception {
         TransformerFactory tf = TransformerFactory.newInstance();
-        tf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        try {
+            tf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        } catch (Exception ignored) {
+        }
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
