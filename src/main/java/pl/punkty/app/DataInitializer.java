@@ -18,7 +18,6 @@ public class DataInitializer {
                                PasswordEncoder encoder) {
         return args -> {
             excuseRepo.backfillNullStatus();
-            peopleService.normalizeAllNamesToAscii();
 
             if (userRepo.findByUsername("PWierzycki").isEmpty()) {
                 UserAccount admin = new UserAccount();

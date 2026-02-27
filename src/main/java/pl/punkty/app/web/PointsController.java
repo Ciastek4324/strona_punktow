@@ -514,13 +514,22 @@ public class PointsController {
 
     @GetMapping("/generator/docm")
     public void generatorDocm(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                              @RequestParam(required = false, defaultValue = "false") boolean useSchedule,
                               HttpServletResponse response) throws IOException {
         LocalDate effectiveDate = (date == null) ? LocalDate.now() : date;
         String monthName = monthName(effectiveDate);
-        Map<String, List<String>> sunday = scheduleService.sundayData(effectiveDate);
-        Map<String, List<String>> weekdayMinistranci = scheduleService.weekdayMinistranci(effectiveDate);
-        Map<String, List<String>> weekdayLektorzy = scheduleService.weekdayLektorzy(effectiveDate);
-        Map<String, List<String>> weekdayAspiranci = scheduleService.weekdayAspiranci(effectiveDate);
+        Map<String, List<String>> sunday = useSchedule
+            ? scheduleService.sundayData(effectiveDate)
+            : scheduleService.sundayDataFromBase(effectiveDate);
+        Map<String, List<String>> weekdayMinistranci = useSchedule
+            ? scheduleService.weekdayMinistranci(effectiveDate)
+            : scheduleService.weekdayMinistranciFromBase(effectiveDate);
+        Map<String, List<String>> weekdayLektorzy = useSchedule
+            ? scheduleService.weekdayLektorzy(effectiveDate)
+            : scheduleService.weekdayLektorzyFromBase(effectiveDate);
+        Map<String, List<String>> weekdayAspiranci = useSchedule
+            ? scheduleService.weekdayAspiranci(effectiveDate)
+            : scheduleService.weekdayAspiranciFromBase(effectiveDate);
 
         response.setContentType("application/vnd.ms-word.document.macroEnabled.12");
         response.setHeader("Content-Disposition", "attachment; filename=\"lista-" + effectiveDate + ".docm\"");
@@ -545,8 +554,9 @@ public class PointsController {
 
     @GetMapping("/generator/docx")
     public void generatorDocx(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                              @RequestParam(required = false, defaultValue = "false") boolean useSchedule,
                               HttpServletResponse response) throws IOException {
-        generatorDocm(date, response);
+        generatorDocm(date, useSchedule, response);
     }
 
     private void writeDocmFromTemplate(InputStream template,
