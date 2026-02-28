@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Strona Punktow</string>
+    <string name="title_activity_main">Strona Punktow</string>
+    <string name="package_name">pl.punkty.app</string>
+    <string name="custom_url_scheme">pl.punkty.app</string>
+</resources>
