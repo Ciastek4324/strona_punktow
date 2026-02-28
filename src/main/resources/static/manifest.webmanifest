@@ -1,0 +1,25 @@
+{
+  "name": "Strona Punktow",
+  "short_name": "Punkty",
+  "lang": "pl",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#1d4ed8",
+  "description": "Panel punktow i grafik sluzby.",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

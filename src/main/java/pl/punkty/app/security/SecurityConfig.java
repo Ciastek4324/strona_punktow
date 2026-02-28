@@ -55,7 +55,21 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, SecurityContextRepository securityContextRepository) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/dashboard", "/css/**", "/login", "/guest", "/h2-console/**", "/excuses", "/excuses/submit").permitAll()
+                .requestMatchers(
+                    "/",
+                    "/dashboard",
+                    "/css/**",
+                    "/js/**",
+                    "/icons/**",
+                    "/manifest.webmanifest",
+                    "/sw.js",
+                    "/offline.html",
+                    "/login",
+                    "/guest",
+                    "/h2-console/**",
+                    "/excuses",
+                    "/excuses/submit"
+                ).permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/excuses/inbox").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/calendar/**").hasAnyRole("ADMIN", "USER", "GUEST")
