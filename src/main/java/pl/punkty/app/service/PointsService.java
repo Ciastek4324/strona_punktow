@@ -2,6 +2,7 @@ package pl.punkty.app.service;
 
 import org.springframework.stereotype.Service;
 import pl.punkty.app.model.Person;
+import pl.punkty.app.model.PersonRole;
 import pl.punkty.app.model.WeeklyAttendance;
 import pl.punkty.app.model.WeeklyTable;
 import pl.punkty.app.repo.WeeklyAttendanceRepository;
@@ -44,9 +45,11 @@ public class PointsService {
         }
         Map<String, Long> nameToId = new HashMap<>();
         Map<Long, String> idToName = new HashMap<>();
+        Map<Long, PersonRole> roleById = new HashMap<>();
         for (Person person : peopleService.getPeopleSorted()) {
             nameToId.put(person.getDisplayName(), person.getId());
             idToName.put(person.getId(), person.getDisplayName());
+            roleById.put(person.getId(), person.getRole());
         }
 
         Map<Long, List<WeeklyAttendance>> byTable = new HashMap<>();
@@ -87,7 +90,11 @@ public class PointsService {
                         continue;
                     }
                     boolean present = presentByPerson.getOrDefault(pid, Set.of()).contains(day);
-                    points.put(pid, points.getOrDefault(pid, 0) + (present ? 1 : -5));
+                    if (present) {
+                        points.put(pid, points.getOrDefault(pid, 0) + 1);
+                    } else if (roleById.get(pid) != PersonRole.LEKTOR_STARSZY) {
+                        points.put(pid, points.getOrDefault(pid, 0) - 5);
+                    }
                 }
             }
 

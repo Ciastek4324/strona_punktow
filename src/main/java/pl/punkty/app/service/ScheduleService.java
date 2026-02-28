@@ -529,7 +529,7 @@ public class ScheduleService {
         if (role == PersonRole.ASPIRANT) {
             return ROLE_ASPIRANT;
         }
-        if (role == PersonRole.LEKTOR) {
+        if (role == PersonRole.LEKTOR || role == PersonRole.LEKTOR_STARSZY) {
             return ROLE_LEKTOR;
         }
         return ROLE_MINISTRANT;
