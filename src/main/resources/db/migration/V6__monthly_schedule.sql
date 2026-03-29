@@ -10,7 +10,7 @@ create unique index if not exists idx_monthly_schedule_month
 create table if not exists monthly_schedule_entry (
     id bigserial primary key,
     schedule_id bigint not null references monthly_schedule(id) on delete cascade,
-    person_id bigint not null references people(id) on delete cascade,
+    person_id bigint not null references persons(id) on delete cascade,
     slot_code integer not null,
     position integer not null
 );
