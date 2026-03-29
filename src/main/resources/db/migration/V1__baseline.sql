@@ -63,18 +63,18 @@ create table if not exists points_history (
   person_id bigint not null
 );
 
-create table if not exists monthly_points_snapshots (
-  id bigserial primary key,
-  created_at timestamp(6) not null,
-  created_by varchar(255) not null,
-  month_date date not null
+create table if not exists monthly_points_snapshot (
+    id bigserial primary key,
+    created_at timestamp(6) not null,
+    created_by varchar(255) not null,
+    month_date date not null
 );
 
-create table if not exists monthly_points_snapshot_items (
-  id bigserial primary key,
-  base_points integer not null,
-  month_points integer not null,
-  person_name varchar(255) not null,
-  total_points integer not null,
-  snapshot_id bigint not null
+create table if not exists monthly_points_snapshot_item (
+    id bigserial primary key,
+    base_points integer not null,
+    month_points integer not null,
+    person_name varchar(255) not null,
+    total_points integer not null,
+    snapshot_id bigint not null
 );
