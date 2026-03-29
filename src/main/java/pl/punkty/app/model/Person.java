@@ -3,7 +3,7 @@ package pl.punkty.app.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "people")
+@Table(name = "persons")
 public class Person {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
